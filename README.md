@@ -46,6 +46,10 @@ Drop the finished `.tpkx` or `.mbtiles` anywhere on your PC and point the receiv
 
 An FM radio already demodulates the RF to a flat four-level baseband at its detector output — the hard radio work is done. This receiver takes that off a sound card and decodes the standardized P25 **Tier-1 location data** in software: symbol recovery, framing, and error correction, down to the position and the transmitting radio's individual ID. The same frames carry **voice**, decoded by a pure-software IMBE vocoder (no dongle, no SDR), with the transmitting radio's link-control ID naming the current speaker. Location and voice are fused by that shared ID, so the unit you hear is the dot that lights up.
 
+## Technical specifications
+
+**📐 [P25 OTA Decode — Master Technical Reference (PDF)](P25_OTA_Decode_Master_Reference.pdf)** — the complete engineering reference behind the receiver. Every stage of the over-the-air GPS and voice decode, specified down to the exact constants, tables, and bit-layouts: symbol recovery, framing, error correction, the pure-software IMBE vocoder, current-speaker fusion, and sensitivity. Written for a DSP/protocol engineer — or another AI — rebuilding this from scratch. *(Also in the [Google Drive folder](https://drive.google.com/drive/folders/1m8bk43vucrA1L5pCvSLETAsHjjMpr-Zw).)*
+
 ## Status
 
 - **Proven live:** Tier-1 GPS decode off the air; the offline map plotter; your own position; and **voice decode** with the **current speaker** identified and lit on the map — all on a normal PC, nothing installed on the viewer.
