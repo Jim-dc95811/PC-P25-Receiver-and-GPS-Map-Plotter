@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# runtime output (not source)
+live_nmea_*.log
+logs/
+track_*.csv
