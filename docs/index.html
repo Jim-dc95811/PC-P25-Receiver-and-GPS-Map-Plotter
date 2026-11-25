@@ -25,13 +25,13 @@ a{color:var(--cyan2);text-decoration:none}
 a:hover{color:#fff}
 
 /* hero */
-header{position:relative;padding-block:72px 54px;
+header{position:relative;padding-block:28px 48px;
   background:radial-gradient(130% 90% at 50% -10%,#15314a 0%,var(--bg) 62%);border-bottom:1px solid var(--line)}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;
   color:var(--gold);font-weight:600;border:1px solid #3a3320;background:rgba(227,178,60,.08);
   padding:5px 12px;border-radius:30px;margin-bottom:20px}
 .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-h1{font-size:clamp(30px,6vw,52px);font-weight:800;letter-spacing:-.5px;line-height:1.08}
+h1{font-size:clamp(26px,5vw,46px);font-weight:800;letter-spacing:-.5px;line-height:1.08}
 h1 .cm{color:var(--cyan2);display:block;font-size:.5em;font-weight:700;letter-spacing:.5px;margin-bottom:8px;color:var(--dim)}
 .lede{color:var(--mut);font-size:clamp(16px,2.4vw,20px);max-width:640px;margin-top:18px}
 .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
@@ -45,12 +45,10 @@ h1 .cm{color:var(--cyan2);display:block;font-size:.5em;font-weight:700;letter-sp
 .tags{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--dim);font-size:13.5px;font-weight:500}
 .tags b{color:var(--mut);font-weight:600}
 
-.showcase{border-bottom:1px solid var(--line)}
-.showcase .wrap{padding-top:40px;padding-bottom:50px}
-.showcase figure{margin:0}
-.showcase img{width:100%;display:block;border-radius:16px;border:1px solid #27425e;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.showcase figcaption{color:var(--mut);font-size:14px;text-align:center;margin-top:14px}
-.showcase figcaption b{color:var(--cyan2);font-weight:600}
+.hero-shot{margin:22px 0 26px}
+.hero-shot img{width:100%;display:block;border-radius:14px;border:1px solid #2b4a68;box-shadow:0 26px 64px rgba(0,0,0,.55)}
+.hero-shot figcaption{color:var(--mut);font-size:14px;text-align:center;margin-top:12px}
+.hero-shot figcaption b{color:var(--cyan2);font-weight:600}
 section{padding-block:56px;border-bottom:1px solid var(--line)}
 .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);font-weight:600;margin-bottom:10px}
 h2{font-size:clamp(23px,3.6vw,32px);font-weight:700;letter-spacing:-.3px}
@@ -106,6 +104,10 @@ footer .ln{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px 18px}
 <header>
   <div class="wrap">
     <div class="eyebrow"><span class="dot"></span> Proven live · off the air · receive-only</div>
+    <figure class="hero-shot">
+      <img src="images/live_z20.jpg" alt="The live receiver in action — Listening active, a 'Jax 25 speaking' current-speaker panel, that unit ringed on the map, three units on Z20 offline satellite imagery.">
+      <figcaption>Live, off the air — the unit that&rsquo;s talking is named and lit on your own Z20 imagery, its voice playing right in the browser.</figcaption>
+    </figure>
     <h1><span class="cm">Claude McNally&rsquo;s</span>PC P25 Receiver &amp; GPS Map Plotter</h1>
     <p class="lede">Hear your P25 fleet and see where every unit is — pulled straight out of the air by a plain PC and a sound card, plotted on <b style="color:var(--ink)">your own offline map</b>. No SDR, no base station, no internet, no cloud.</p>
     <div class="cta">
@@ -121,15 +123,6 @@ footer .ln{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px 18px}
     </div>
   </div>
 </header>
-
-<section class="showcase">
-  <div class="wrap">
-    <figure>
-      <img src="images/live_z20.jpg" alt="The live receiver in action — Listening active, a 'Jax 25 speaking' current-speaker panel at the top, that unit ringed on the map, three units on Z20 offline satellite imagery.">
-      <figcaption>Live, off the air — and you can hear it: the current speaker named and lit while your own position and the fleet ride your own Z20 imagery.</figcaption>
-    </figure>
-  </div>
-</section>
 
 <section>
   <div class="wrap">
