@@ -54,6 +54,9 @@ SERVE_PORT = 10110                # standard NMEA-0183-over-TCP port (same as bk
 LINK_EVERY_S = 5.0                # $PLKT,LINK,UP heartbeat cadence (matches bk_bridge)
 SELF_ID = "LOOKOUT"               # map.html centers/colors this id as "MY POSITION"
 SELF_EVERY_S = 1.5                # throttle self-position broadcasts
+VOICE_MAX_BAD_FRAC = 0.55         # Rule #1: mute a key-up if more than this fraction of its
+                                  # voice frames decoded bad (too weak to hear cleanly). Tunable.
+QUEUE_BACKLOG_S = 60.0            # cap the capture queue at this many seconds of audio backlog
 
 
 # ---------------------------------------------------------------------------
@@ -76,11 +79,16 @@ class NmeaServer:
     def start(self):
         srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv.bind(("0.0.0.0", self.port)); srv.listen(8)
+        try:
+            srv.bind(("0.0.0.0", self.port)); srv.listen(8)
+        except OSError as e:
+            print("!! could not open the position feed on port %d (%s)." % (self.port, e))
+            print("   Another copy of the receiver is probably already running -- close it, then start again.")
+            raise SystemExit(2)
         self.srv = srv
         threading.Thread(target=self._accept, daemon=True).start()
         threading.Thread(target=self._heartbeat, daemon=True).start()
-        print("serving NMEA on tcp 0.0.0.0:%d  (the Traveler's units_kml reads this)" % self.port)
+        print("serving NMEA on tcp 0.0.0.0:%d  (the map server reads this)" % self.port)
 
     def _accept(self):
         while not self.stop.is_set():
@@ -88,7 +96,7 @@ class NmeaServer:
                 conn, addr = self.srv.accept()
             except OSError:
                 return
-            conn.settimeout(5)
+            conn.settimeout(2.0)                # a stuck viewer can stall a broadcast at most this long
             with self.lock:
                 self.clients.add(conn)
             print("   .. map/viewer connected from %s  (%d now)" % (addr[0], len(self.clients)))
@@ -195,23 +203,29 @@ def _make_combo(rate, server, vws, on_report, on_status):
     def on_voice(frames, spk, t):
         if not frames:
             return
+        dur = len(frames) * 0.02
         try:
-            pcm = imbe_decode.decode_frames(frames, uvquality=3, seed=1)  # int16 @ 8 kHz
+            pcm, bad_frac = imbe_decode.decode_transmission(frames, uvquality=3, seed=1)  # int16 @ 8 kHz
         except Exception as e:
-            on_status("voice decode error: %s" % e); return
-        if vws is not None:
+            on_status("voice decode error: %s" % e)
+            pcm, bad_frac = None, 1.0
+        if pcm is not None and bad_frac > VOICE_MAX_BAD_FRAC:
+            # Rule #1: this key-up decoded too poorly to be worth hearing. Stay silent
+            # rather than stream warble. (Per-frame muting already stops a screech; this
+            # drops a whole near-dead transmission.)
+            on_status("voice too weak -- muted (%.0f%% bad frames, %.1fs)" % (bad_frac * 100, dur))
+        elif pcm is not None and vws is not None:
             # push in ~100 ms chunks so a listener that joins mid-talk catches up smoothly
             b = pcm.astype("<i2").tobytes()
             step = 800 * 2
             for o in range(0, len(b), step):
                 vws.push(b[o:o + step])
-        dur = len(frames) * 0.02
+            on_status("voice: %d frames (%.1fs, %.0f%% clean) -> stream" % (len(frames), dur, (1 - bad_frac) * 100))
         if server:
             # clear the talker shortly after the audio finishes so the ring fades with the voice
             def _clear():
                 server.broadcast(_nmea_mk("PLKT,SPEAKER,-"))
             threading.Timer(dur + 0.4, _clear).start()
-        on_status("voice: %d frames (%.1fs) -> stream" % (len(frames), dur))
 
     return ComboDecoder(rate, on_report=on_report, on_speaker=on_speaker,
                         on_voice=on_voice, on_status=on_status)
@@ -254,9 +268,25 @@ def run_live(server, vws=None):
             if pp: server.broadcast(pp)
 
     dec = _make_combo(rate, server, vws, on_report, lambda m: print("   .. %s" % m))
-    q = queue.Queue()
+
+    # Bounded capture queue: ~QUEUE_BACKLOG_S of audio. A pure-Python voice decode of a
+    # long key-up can briefly run behind real time; the queue absorbs that and the worker
+    # catches up after. If the decoder ever falls a full minute behind (pathological
+    # continuous traffic), the OLDEST block is dropped so memory can never grow without
+    # bound -- counted and reported, because a drop means some audio was lost under load.
+    qmax = max(64, int(QUEUE_BACKLOG_S * rate / BLOCK))
+    q = queue.Queue(maxsize=qmax)
+    drops = {"n": 0}
     def cb(indata, frames, tinfo, status):
-        q.put(indata[:, 0].copy())
+        # realtime audio callback: never block. On a full queue, drop the oldest block.
+        try:
+            q.put_nowait(indata[:, 0].copy())
+        except queue.Full:
+            try: q.get_nowait()
+            except queue.Empty: pass
+            try: q.put_nowait(indata[:, 0].copy())
+            except queue.Full: pass
+            drops["n"] += 1
 
     print("Claude McNally's P25 Receiver (OTA decode) v%s" % VERSION)
     print("listening on: %s  (%d Hz mono)" % (name, rate))
@@ -269,19 +299,43 @@ def run_live(server, vws=None):
         while not stop.is_set():
             try: blk = q.get(timeout=0.5)
             except queue.Empty: blk = None
-            if blk is not None: dec.feed(blk)
+            if blk is not None:
+                try:
+                    dec.feed(blk)            # per-block isolation: a bad block never kills the worker
+                except Exception as e:
+                    print("   .. decode hiccup (%s) - skipped, still listening" % e)
             if time.time() - last > 30:
                 last = time.time()
-                print("   .. listening (%d report%s so far)" % (state["n"], "" if state["n"] == 1 else "s"))
+                extra = ("  [%d blocks dropped under load]" % drops["n"]) if drops["n"] else ""
+                print("   .. listening (%d report%s so far)%s"
+                      % (state["n"], "" if state["n"] == 1 else "s", extra))
     th = threading.Thread(target=worker, daemon=True); th.start()
+
+    # Sound-card capture WITH disconnect recovery: if the USB card is yanked or the stream
+    # errors, report it and keep retrying to reopen -- the decoder, map and feed all stay up
+    # the whole time. (The box's hung-card watchdog, brought to the PC.)
     try:
-        with sd.InputStream(device=dev, channels=1, samplerate=rate,
-                            dtype="float32", blocksize=BLOCK, callback=cb):
-            while True: time.sleep(0.25)
+        while not stop.is_set():
+            try:
+                with sd.InputStream(device=dev, channels=1, samplerate=rate,
+                                    dtype="float32", blocksize=BLOCK, callback=cb):
+                    while not stop.is_set():
+                        time.sleep(0.25)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                print("   .. sound card lost or unreadable (%s); retrying in 3s ..." % e)
+                time.sleep(3.0)
+                nd = _auto_device(sd, forced)   # the card may re-enumerate at a new index
+                if nd is not None and nd[0] != dev:
+                    dev, name = nd
+                    print("   .. found the input again: %s" % name)
     except KeyboardInterrupt:
         print("\nstopping ...")
     finally:
-        stop.set(); th.join(timeout=2); lf.close()
+        stop.set(); th.join(timeout=2)
+        try: lf.close()
+        except Exception: pass
         print("stopped. %d report%s decoded. log: %s"
               % (state["n"], "" if state["n"] == 1 else "s", os.path.abspath(logpath)))
 
@@ -319,6 +373,24 @@ def run_replay(wavpath, server, vws=None):
             while True: time.sleep(0.5)
         except KeyboardInterrupt:
             print("\nstopping ...")
+
+
+def _auto_device(sd, forced=None):
+    """Find the radio's input WITHOUT prompting -- for silent reconnects. Prefers the
+    forced index if it is still a valid input, else the first name-hint match, else None."""
+    try:
+        devs = sd.query_devices()
+    except Exception:
+        return None
+    ins = [(i, d) for i, d in enumerate(devs) if d.get("max_input_channels", 0) > 0]
+    if forced is not None:
+        for i, d in ins:
+            if i == forced:
+                return forced, d["name"]
+    for i, d in ins:
+        if any(h in d["name"].lower() for h in DEV_HINTS):
+            return i, d["name"]
+    return None
 
 
 def pick_device(sd, forced=None):

@@ -443,6 +443,12 @@ class ImbeDecoder:
         self.cur, self.prev, self.penh = init_parms()
         self.uvquality = uvquality
         self.rng = _GlibcRand(seed)
+        # Additive quality counters. These only COUNT the decision the decoder
+        # already makes (bad codeword -> repeat/mute); they never touch cur/prev/
+        # rng or the PCM, so the audio stays byte-for-byte the sealed reference.
+        # They let a caller apply a tunable transmission-level gate (Rule #1).
+        self.total = 0        # frames decoded
+        self.bad = 0          # frames whose ECC said "bad" (repeated/muted, not synthesized clean)
 
     def decode_frame(self, imbe_fr):
         fr = [list(row) for row in imbe_fr]
@@ -451,7 +457,9 @@ class ImbeDecoder:
         imbe_d, errs_data = _ecc_data(fr)
         errs2 = errs_c0 + errs_data            # C: errs2 = C0 errs + data errs
         bad = decode_imbe4400_parms(imbe_d, self.cur, self.prev)
+        self.total += 1
         if bad == 1 or errs2 > 5:
+            self.bad += 1
             _use_last(self.cur, self.prev)
             self.cur.repeat += 1
         else:
@@ -472,3 +480,17 @@ def decode_frames(frames, uvquality=3, seed=1):
     dec = ImbeDecoder(uvquality, seed)
     out = [dec.decode_frame(f) for f in frames]
     return np.concatenate(out) if out else np.zeros(0, np.int16)
+
+
+def decode_transmission(frames, uvquality=3, seed=1):
+    """Decode one key-up and also report its quality: (pcm, bad_frac).
+
+    bad_frac = fraction of frames whose ECC flagged them bad (so the vocoder
+    repeated/muted them instead of synthesizing a clean frame). The PCM is
+    identical to decode_frames(); bad_frac is the tunable signal a caller uses
+    to mute a near-dead transmission (Rule #1) rather than play it as warble."""
+    dec = ImbeDecoder(uvquality, seed)
+    out = [dec.decode_frame(f) for f in frames]
+    pcm = np.concatenate(out) if out else np.zeros(0, np.int16)
+    bad_frac = (dec.bad / dec.total) if dec.total else 1.0
+    return pcm, bad_frac

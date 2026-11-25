@@ -109,7 +109,16 @@ class ComboDecoder:
                     self._process(seg)
 
     def _process(self, seg):
-        """One captured transmission -> GPS report, or voice + current speaker."""
+        """One captured transmission -> GPS report, or voice + current speaker.
+        Fully isolated: a decode error on one malformed transmission is reported
+        and skipped, never raised -- the gate is already back to IDLE by now, so
+        the decoder keeps running on the next key-up untouched."""
+        try:
+            self._process_inner(seg)
+        except Exception as e:
+            self.on_status('tx %d: decode error (%s) - skipped' % (self.tx, e))
+
+    def _process_inner(self, seg):
         t = time.time()
         # 1) GPS data burst? (the proven robust acquisition on the burst onset)
         onsets = detect_in_segment(seg, self.fr0) or [PREROLL_S]
