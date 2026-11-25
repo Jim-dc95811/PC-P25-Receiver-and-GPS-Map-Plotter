@@ -47,7 +47,13 @@ class VoiceWS:
     def start(self):
         srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv.bind(("0.0.0.0", self.port)); srv.listen(8)
+        try:
+            srv.bind(("0.0.0.0", self.port)); srv.listen(8)
+        except OSError as e:
+            # Keep the wall: if the voice port can't open, voice is simply off -- the map
+            # and the position feed are untouched. push() stays a harmless no-op (no clients).
+            print("   !! voice port %d unavailable (%s); voice disabled, map/GPS unaffected." % (self.port, e))
+            return self
         self.srv = srv
         threading.Thread(target=self._accept, daemon=True).start()
         print("serving voice on ws 0.0.0.0:%d  (the map's Listen button plays this)" % self.port)

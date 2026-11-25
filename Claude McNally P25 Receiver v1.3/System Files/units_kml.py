@@ -285,8 +285,16 @@ def _maps_list():
 
 _CTYPE = {".js": "application/javascript", ".css": "text/css", ".html": "text/html; charset=utf-8"}
 def _serve_asset(h, name):
+    # Defense in depth: callers only ever pass fixed basenames (map.html / leaflet.*),
+    # but never let a name escape the asset dir -- no separators, no "..", and the
+    # resolved file must sit directly in _ASSET_DIR. A traversal attempt -> 404.
+    if os.path.sep in name or (os.path.altsep and os.path.altsep in name) or name in ("", ".", ".."):
+        h.send_error(404); return
     try:
-        data = (_ASSET_DIR / name).read_bytes()
+        p = (_ASSET_DIR / name).resolve()
+        if p.parent != _ASSET_DIR or not p.is_file():
+            h.send_error(404); return
+        data = p.read_bytes()
     except OSError:
         h.send_error(404); return
     h.send_response(200)
@@ -385,6 +393,7 @@ _link_seen  = 0.0             # monotonic time of the last LINK status heard
 # CURRENT SPEAKER, learned from $PLKT,SPEAKER,<id> (and ,-  to clear) -- the
 # combo platter's join: the talking unit's own id, so the map rings that dot.
 _speaker = {"id": None, "t": 0.0}
+_speaker_lock = threading.Lock()   # _speaker is written by the feed thread, read by HTTP threads
 SPEAKER_HOLD_S = 8.0          # drop a stale speaker if no clear/update arrives
 
 class Report:
@@ -429,8 +438,9 @@ class StreamParser:
                 _link_seen = time.monotonic()
             elif tag == "PLKT" and len(f) >= 3 and f[1] == "SPEAKER":
                 sid = f[2].split("*")[0]
-                _speaker["id"] = None if sid in ("", "-") else sid
-                _speaker["t"] = time.monotonic()
+                with _speaker_lock:
+                    _speaker["id"] = None if sid in ("", "-") else sid
+                    _speaker["t"] = time.monotonic()
         if last_end:
             del self._buf[:last_end]
         if len(self._buf) > 8192:
@@ -574,8 +584,9 @@ def _units_payload():
                     "sats": u.get("sats", "")})
     out.sort(key=lambda d: d["name"].lower())
     sp = None
-    sid = _speaker["id"]
-    if sid and (now - _speaker["t"]) <= SPEAKER_HOLD_S:
+    with _speaker_lock:
+        sid = _speaker["id"]; st = _speaker["t"]
+    if sid and (now - st) <= SPEAKER_HOLD_S:
         sp = {"id": sid, "name": al.get(sid, sid)}
     return {"server_time": time.strftime("%H:%M:%S"),
             "alarm": {"down": down, "why": why},
@@ -702,6 +713,11 @@ class _H(BaseHTTPRequestHandler):
     #      map (.tpkx / .mbtiles) to view. We serve that file's folder (so every map in
     #      it lists too) and return the picked map's slug so the page jumps to it. ----
     def _pick_map(self):
+        # Local only: this pops a native file dialog on the HOST PC, so a remote LAN
+        # viewer must never be able to trigger it. Only the operator's own browser
+        # (localhost) may open the picker.
+        if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+            return self._json(403, {"ok": False, "error": "the map picker is available on this PC only"})
         picked = ""
         try:
             import subprocess, sys as _sys
@@ -740,6 +756,19 @@ class _H(BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+
+class _Server(ThreadingHTTPServer):
+    """Quiet, robust HTTP server. Request threads are daemons (a stuck one never blocks
+    shutdown), and a browser aborting a tile or fetch mid-send (BrokenPipe / connection
+    reset) is normal map behaviour -- swallowed, not spilled as a traceback."""
+    daemon_threads = True
+    allow_reuse_address = True
+    def handle_error(self, request, client_address):
+        et = sys.exc_info()[0]
+        if et is not None and issubclass(et, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
+            return
+        super().handle_error(request, client_address)
 
 # ---------- read the bridge's NMEA feed ----------
 def read_bridge():
@@ -799,7 +828,13 @@ if __name__ == "__main__":
     print(f"   diagnostic: who pulls the map + how often -> http://{SERVE_HOST}:{SERVE_PORT}/fetchlog", flush=True)
     threading.Thread(target=(demo_feed if args.demo else read_bridge), daemon=True).start()
     try:
-        ThreadingHTTPServer((SERVE_HOST, SERVE_PORT), _H).serve_forever()
+        httpd = _Server((SERVE_HOST, SERVE_PORT), _H)
+    except OSError as e:
+        print(f"[units] !! could not open the map on port {SERVE_PORT} ({e}).", flush=True)
+        print("[units]    Another copy is probably already running -- close it, then start again.", flush=True)
+        sys.exit(2)
+    try:
+        httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n[units] stopped.", flush=True)
         sys.exit(0)
