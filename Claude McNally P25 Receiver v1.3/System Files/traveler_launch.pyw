@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-The Traveler PC - single-window launcher.
+Claude McNally's P25 Receiver - single-window launcher.
 
 Starts the OTA decoder and the map server as WINDOWLESS background processes
 (no black command windows) and shows one small control window. Pick the radio
 input, open the map, and Stop when done. Closing this window stops everything.
 
-Run by pythonw.exe (no console) from "Start The Traveler PC.bat".
+Run by pythonw.exe (no console) from "Start Claude McNally P25 Receiver.bat".
 """
 import os, sys, time, threading, subprocess, webbrowser
 import tkinter as tk
@@ -51,16 +51,16 @@ class App:
         self.srv = None
         os.environ.setdefault("LOOKOUT_MAP_ROOTS", default_maps())
 
-        root.title("The Traveler PC")
+        root.title("Claude McNally's P25 Receiver")
         root.configure(bg="#0d141c")
-        root.geometry("440x270")
+        root.geometry("460x270")
         try:
             root.resizable(False, False)
         except Exception:
             pass
 
-        tk.Label(root, text="THE TRAVELER PC", fg="#7fd1ff", bg="#0d141c",
-                 font=("Segoe UI", 15, "bold")).pack(pady=(18, 2))
+        tk.Label(root, text="CLAUDE McNALLY'S P25 RECEIVER", fg="#7fd1ff", bg="#0d141c",
+                 font=("Segoe UI", 14, "bold")).pack(pady=(18, 2))
         tk.Label(root, text="Radio → live map  ·  built by Claude McNally",
                  fg="#c9a24b", bg="#0d141c", font=("Segoe UI", 9, "italic")).pack()
 
@@ -88,7 +88,7 @@ class App:
                   bg="#5a1f1f", fg="#ffecec", activebackground="#7a2a2a",
                   relief="flat", padx=18, pady=7).grid(row=0, column=1, padx=6)
 
-        tk.Label(root, text="Closing this window stops The Traveler PC.",
+        tk.Label(root, text="Closing this window stops the receiver.",
                  fg="#5f7284", bg="#0d141c", font=("Segoe UI", 8)).pack(side="bottom", pady=8)
 
         root.protocol("WM_DELETE_WINDOW", self.stop)

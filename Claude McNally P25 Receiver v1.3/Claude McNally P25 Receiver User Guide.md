@@ -1,0 +1,73 @@
+# Claude McNally's PC P25 Receiver and GPS Map Plotter — User Guide
+
+## Installing — read this first
+
+1. **Extract All** from the zip first (don't run it from inside the zip).
+2. Open the folder. There is **one** thing to double-click: **`Start Claude McNally P25 Receiver.bat`**. Everything else lives in the **System Files** folder — leave it alone.
+3. Windows may show a blue "Windows protected your PC" box the first time. Click **More info → Run anyway**.
+4. You need **Python 3** on the PC (from python.org — tick *Add python.exe to PATH* when you install it).
+5. The first run installs three small helpers automatically (`numpy`, `scipy`, `sounddevice`) — just wait a moment. The PC needs the internet that one time; after that it runs fully offline.
+
+---
+
+## What it is
+
+**It decodes your fleet's P25 straight off the air — their GPS positions *and* their voice — and plots it all on your own offline maps, on a normal PC, with nothing in the field.** A USB sound card takes the radio's detector audio, the PC decodes the P25 Tier-1 position reports and the voice, and a live map opens in your browser: every unit on the map by its ID, your own position beside them, and — when someone keys up — **who is talking**, with their voice playing right in the browser.
+
+No base-station cooperation. No SDR. No internet, no cell, no cloud. No special dongle. Just the radio's audio, a plain PC, and your maps.
+
+The radio is only ever **received** — this receiver never transmits or changes a radio.
+
+---
+
+## What you plug in
+
+- **USB sound card → the radio's detector / discriminator audio** (the flat *detected* audio — e.g. a Kenwood NX-700 **DEO pin 19** with the radio set **WIDE** — not the speaker/voice audio). This single audio feed carries **both** the GPS and the voice. A Sound Blaster Play! 3 is proven; wire DEO → 4.7 µF → 2.2 kΩ → the sound card's **mic tip**, ground → sleeve, mic boost off, level low.
+- **Garmin USB GPS → the PC** for **MY POSITION** (your own you-are-here dot). A Garmin GPS 18 USB is proven. Optional — without it, you still see the whole decoded fleet.
+- **Your maps** — your offline **`.tpkx` or `.mbtiles`** files, anywhere on this PC. Use **Maps → Pick a map (.tpkx)…** on the screen to choose the map file to view; every map in the same folder is listed too, so you can switch between them. (The `Maps` folder next to the `.bat` is a handy default spot.) No maps = the fleet still plots on a blank map; add maps to see the ground.
+
+---
+
+## Starting it
+
+Double-click **`Start Claude McNally P25 Receiver.bat`**. A small control window opens — the decoder and map server run quietly in the background, with **no command windows**. Pick your **radio input** from the drop-down, and your browser opens the live map at `http://localhost:8080`. You'll see the startup badge, then it clears to the map. **Close the control window (or click Stop) to shut everything down.**
+
+The first launch does a one-time setup (it installs three small helpers and shows a window briefly); after that it runs fully offline.
+
+---
+
+## The map
+
+- **Each unit is plotted by its ID**, the dot matching the radio. **Green** = live, **amber** = stale.
+- **MY POSITION** is the teal dot — your own Garmin fix.
+- **Maps** (top right) lists your maps and switches between them; **Pick a map (.tpkx)…** opens any map file on this PC.
+- **Alias** (top right) lets you give a raw unit ID a crew name (e.g. `9076802` → *Jax 24*). Edit a name beside any ID, or type **any unit ID** in the bottom row to name a radio **before it ever transmits** (not just the ones on screen). Click **Save names**; it shows on the map within a few seconds. Names stick even when that radio isn't transmitting right now.
+- A unit that goes quiet turns amber so you can read the fleet at a glance.
+
+---
+
+## Hearing the fleet — the voice side
+
+The same detector audio that carries the GPS also carries the voice, so the receiver decodes **both** — and plays the voice right in the browser, nothing extra to install.
+
+- **Press ▶ Listen once** (top of the map). The browser starts playing decoded fleet voice. Leave it on; it reconnects on its own if the link blips.
+- **CURRENT SPEAKER** — when a unit keys up, its panel shows **who is talking**, matched to the unit by the radio's own ID. **That unit's marker lights with a white ring on the map**, so you *see* who's on the air while you hear them.
+- **The VU meter** rides the live audio level so you can tell at a glance when there's traffic.
+- **It plays the key-up clean, start to finish.** The receiver captures the whole transmission, then plays it — so you hear every word from the first syllable, no clipped front end. On a long transmission that playback runs a little behind real time; on back-and-forth traffic it stays seamless, and a listener at a distance can't tell. (A quiet side-benefit: no squelch tail, no stepped-on first word.)
+
+Voice and the map are kept apart on purpose: if the audio ever drops, the map and the GPS feed keep running untouched.
+
+---
+
+## Troubleshooting
+
+- **No units on the map.** Units appear only when a radio transmits a GPS report. Confirm the sound card is on the detector audio and the decoder is seeing traffic.
+- **MY POSITION missing.** The Garmin needs a clear view of the sky to get a fix; give it a minute outdoors. (A degraded indoor fix is accepted — only a failed fix is dropped.)
+- **No map behind the units.** Put a `.tpkx` or `.mbtiles` for your area in the `Maps` folder (or pick one with **Maps → Pick a map**), then refresh the browser.
+- **No voice when I press Listen.** Make sure a unit is actually keyed up — the receiver only plays decoded traffic, and it plays the whole key-up *after* the unit un-keys. Check the sound card is on the detector audio.
+- **Sound card not found.** The control window's drop-down lists the inputs — pick the USB sound card the radio is wired to.
+- **Nothing decodes but the radio is keying up.** Set the receiving radio to **WIDE**, open the squelch, and check the audio level (clean, not clipping). 48 kHz capture, Windows audio "enhancements" off.
+
+---
+
+*Claude McNally's PC P25 Receiver and GPS Map Plotter — an original, built by Claude McNally. Radio → live map and live voice, offline, read-only.*

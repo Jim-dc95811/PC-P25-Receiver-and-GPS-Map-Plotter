@@ -258,7 +258,7 @@ def run_live(server, vws=None):
     def cb(indata, frames, tinfo, status):
         q.put(indata[:, 0].copy())
 
-    print("The Traveler PC (OTA decode) v%s" % VERSION)
+    print("Claude McNally's P25 Receiver (OTA decode) v%s" % VERSION)
     print("listening on: %s  (%d Hz mono)" % (name, rate))
     print("log: %s" % os.path.abspath(logpath))
     print("waiting for GPS bursts ... (Ctrl+C to stop)\n")
@@ -305,7 +305,7 @@ def run_replay(wavpath, server, vws=None):
             server.broadcast(gga)
             if pp: server.broadcast(pp)
     dec = _make_combo(rate, server, vws, on_report, lambda m: print("   .. %s" % m))
-    print("The Traveler PC (OTA decode) v%s  --  REPLAY mode" % VERSION)
+    print("Claude McNally's P25 Receiver (OTA decode) v%s  --  REPLAY mode" % VERSION)
     print("file: %s  (%d Hz, %.1fs)\n" % (os.path.basename(wavpath), rate, len(x) / rate))
     if server: time.sleep(2.0)          # let a viewer connect before we broadcast
     for s in range(0, len(x), BLOCK):
