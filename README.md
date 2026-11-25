@@ -48,7 +48,7 @@ An FM radio already demodulates the RF to a flat four-level baseband at its dete
 
 ## Technical specifications
 
-**📐 [P25 OTA Decode — Master Technical Reference (PDF)](P25_OTA_Decode_Master_Reference.pdf)** — the complete engineering reference behind the receiver. Every stage of the over-the-air GPS and voice decode, specified down to the exact constants, tables, and bit-layouts: symbol recovery, framing, error correction, the pure-software IMBE vocoder, current-speaker fusion, and sensitivity. Written for a DSP/protocol engineer — or another AI — rebuilding this from scratch. *(Also in the [Google Drive folder](https://drive.google.com/drive/folders/1m8bk43vucrA1L5pCvSLETAsHjjMpr-Zw).)*
+**📐 [P25 OTA Decode — Master Technical Reference (PDF)](https://drive.google.com/file/d/1z-pSzCaIBaWQ2cFEtHxMv66XbwjhR8Pd/view)** — the complete engineering reference behind the receiver. Every stage of the over-the-air GPS and voice decode, specified down to the exact constants, tables, and bit-layouts: symbol recovery, framing, error correction, the pure-software IMBE vocoder, current-speaker fusion, and sensitivity. Written for a DSP/protocol engineer — or another AI — rebuilding this from scratch. *(Opens in Google Drive; a copy also lives in this repo: [P25_OTA_Decode_Master_Reference.pdf](P25_OTA_Decode_Master_Reference.pdf).)*
 
 ## Status
 
