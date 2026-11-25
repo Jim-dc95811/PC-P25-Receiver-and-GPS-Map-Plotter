@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Universal Traveler — Architecture Overview</title>
+<style>
+  :root{
+    --navy:#1b2a4a; --slate:#34435c; --ink:#1d2430; --mut:#5b6882;
+    --ember:#c0622a; --teal:#14746b; --line:#d7dde6; --panel:#f4f6f9; --paper:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:Georgia,"Times New Roman",serif; font-size:10.6pt; line-height:1.5;}
+  h1,h2,h3,.kicker,.lede,.tag,.foot,th,.cap{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;}
+  .wrap{max-width:7.1in;margin:0 auto;padding:0 .15in;}
+
+  /* cover */
+  .cover{border-top:6px solid var(--ember);padding-top:26px;margin-bottom:26px;}
+  .kicker{font-size:8.3pt;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);font-weight:700;}
+  h1{font-size:25pt;line-height:1.08;color:var(--navy);margin:.18in 0 .06in;letter-spacing:-.01em;}
+  .sub{font-size:12.3pt;color:var(--slate);font-weight:600;font-family:"Segoe UI",system-ui,Arial,sans-serif;margin-bottom:.22in;}
+  .meta{display:flex;flex-wrap:wrap;gap:0 34px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:9px 0;font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:8.7pt;color:var(--mut);}
+  .meta b{color:var(--ink);font-weight:600;display:block;font-size:9.3pt;}
+  .note{font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:8.5pt;color:var(--mut);
+    background:var(--panel);border-left:3px solid var(--line);padding:8px 12px;margin:14px 0 0;border-radius:0 4px 4px 0;}
+
+  h2{font-size:13.5pt;color:var(--navy);margin:22px 0 7px;padding-bottom:4px;border-bottom:2px solid var(--line);
+     letter-spacing:.005em;}
+  h2 .n{color:var(--ember);font-weight:800;margin-right:9px;}
+  h3{font-size:10.6pt;color:var(--slate);margin:13px 0 2px;letter-spacing:.01em;}
+  p{margin:.045in 0;}
+  .lede{font-size:11pt;color:var(--slate);line-height:1.55;}
+  strong{color:var(--ink);}
+  ul{margin:.05in 0 .05in;padding-left:.26in;}
+  li{margin:.035in 0;}
+  .tag{display:inline-block;font-size:7.6pt;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
+    color:var(--teal);border:1px solid var(--teal);border-radius:3px;padding:1px 6px;margin-right:4px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:13px 16px;margin:11px 0;}
+  .cap{font-size:8.1pt;color:var(--mut);text-align:center;margin-top:5px;font-style:normal;}
+
+  table{width:100%;border-collapse:collapse;margin:9px 0;font-size:9.1pt;}
+  th{background:var(--navy);color:#fff;text-align:left;padding:6px 9px;font-size:8.3pt;letter-spacing:.04em;text-transform:uppercase;font-weight:600;}
+  td{padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:#fafbfd;}
+  td b{color:var(--navy);}
+
+  .hist{list-style:none;padding:0;margin:10px 0;}
+  .hist li{position:relative;padding:0 0 12px 24px;border-left:2px solid var(--line);margin-left:8px;}
+  .hist li:last-child{border-left-color:transparent;}
+  .hist .st{display:block;font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:7.8pt;font-weight:700;
+    color:var(--ember);letter-spacing:.09em;text-transform:uppercase;margin-bottom:1px;line-height:1.2;}
+  .hist .dot{position:absolute;left:-7px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff;border:2.5px solid var(--ember);}
+  .hist b{color:var(--navy);font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:9.6pt;}
+
+  .foot{margin-top:26px;border-top:1px solid var(--line);padding-top:8px;
+    font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:7.8pt;color:var(--mut);display:flex;justify-content:space-between;}
+  .avoid{page-break-inside:avoid;}
+  h2{page-break-after:avoid;}
+  svg{display:block;margin:0 auto;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover avoid">
+    <div class="kicker">System Architecture Overview &middot; Concept Proposal</div>
+    <h1>Universal Traveler</h1>
+    <div class="sub">Passive, Infrastructure-Free P25 Tier-1 Location Intelligence &amp; Mapping</div>
+    <div class="meta">
+      <div><b>Prepared for</b>L3Harris Technologies — PSPC (concept study)</div>
+      <div><b>Prepared by</b>J. Gaddy, with Claude (Anthropic)</div>
+      <div><b>Classification</b>Concept / Architecture Overview</div>
+      <div><b>Revision</b>A &middot; 2026-11-24</div>
+    </div>
+    <div class="note">This document is a concept and architecture overview prepared as an engineering proposal. It describes a working, bench-proven capability and the path that produced it. It is not an official product specification and uses no proprietary or agency-specific data.</div>
+  </div>
+
+  <h2><span class="n">1</span>Executive Summary</h2>
+  <p class="lede">Every fielded P25 radio already transmits its own position in a standardized, open format. Today that information is only usable by the agency that owns the radio system, and only through that system's own infrastructure. <strong>Universal Traveler recovers it with nothing but a receiver.</strong></p>
+  <p>The system takes the recovered baseband at an ordinary analog receiver's detector output, decodes the standardized P25 Tier-1 location data (TIA-102.BAJB) entirely in software, and plots every unit on an offline map by its individual ID — with no SDR, no cooperating base station, no network, and no dependence on the fleet's infrastructure. It runs on commodity hardware: an ordinary PC, or a self-contained embedded appliance built on a sub-$100 router. The display is any web browser on any device.</p>
+  <p>The result closes a real and structural gap. Vendor location services map an agency's <em>own</em> units <em>through the agency's own network</em>. Open-source monitors decode P25 off the air but require an SDR and produce no location product. <strong>Nothing on the market delivers standards-based location, passively, off the air, on commodity hardware.</strong> This proposal documents that capability, the architecture behind it, and the development history that proved it end to end.</p>
+
+  <p style="margin-top:10px;">
+    <span class="tag">Passive</span><span class="tag">No SDR</span><span class="tag">Standards-based</span>
+    <span class="tag">Vendor-neutral</span><span class="tag">Offline</span><span class="tag">Commodity cost</span>
+  </p>
+
+  <h2><span class="n">2</span>The Gap It Fills</h2>
+  <table>
+    <tr><th style="width:27%">Approach</th><th style="width:30%">How it gets location</th><th>Limitation</th></tr>
+    <tr><td><b>Vendor AVL</b><br>(system location services)</td><td>Radios report position <em>up through</em> the vendor's trunked network and base-station infrastructure to a console application.</td><td>Requires the vendor's infrastructure and a cooperating system. Maps the owner's own fleet only. Infrastructure-dependent by design.</td></tr>
+    <tr><td><b>SDR monitors</b><br>(open-source)</td><td>Re-demodulate the RF with a software-defined radio; focus on voice and trunking metadata.</td><td>Require an SDR. No packaged location product. Not a map plotter. Not a deployable system.</td></tr>
+    <tr><td><b>Universal Traveler</b></td><td>Decodes the standardized Tier-1 location data directly from a receiver's detector audio, in software.</td><td>Coverage-limited like any receiver — but needs <em>zero</em> cooperation, <em>no</em> SDR, and <em>no</em> network.</td></tr>
+  </table>
+  <p>The two established approaches sit at opposite ends and leave the middle empty: infrastructure-bound AVL on one side, unproductized SDR hobby tools on the other. Universal Traveler is the passive, universal, commodity middle — and because it decodes the <strong>open Tier-1 standard</strong> rather than any one vendor's proprietary scheme, it is inherently vendor-neutral.</p>
+
+  <h2><span class="n">3</span>How We Got Here</h2>
+  <p>The architecture was not designed on paper and then built. It was proven one checkpoint at a time, each validated against ground truth before the next was attempted. The path is the strongest argument for the design.</p>
+  <ul class="hist">
+    <li><span class="st">The insight</span><span class="dot"></span><b>Detector audio is already demodulated.</b> An FM receiver tuned to a P25 channel recovers the four-level C4FM baseband at its discriminator/detector output. The hard RF work is already done in the radio — so no SDR and no re-demodulation are required. Tap that output into a sound card and the signal is digital symbols waiting to be sliced.</li>
+    <li><span class="st">The decode chain</span><span class="dot"></span><b>From baseband to a standardized sentence.</b> A faithful software chain was assembled: automatic gain control and a matched symbol filter, a minimum-mean-square-error loop that recovers symbol clock and level to a clean eye, 48-bit frame synchronization, network-ID decode (BCH), data-PDU assembly, and rate-1/2 convolutional error correction decoded with a Viterbi algorithm. The output is the standardized Tier-1 payload: an NMEA position plus the transmitting radio's individual ID.</li>
+    <li><span class="st">Ground-truth proof</span><span class="dot"></span><b>Byte-for-byte against the answer key.</b> The decoded sentence was compared, character for character, against the position the cooperating base independently reported for the same transmission. On a clean capture the match was exact on every burst — position, altitude, checksum, and unit ID. Correctness was measured, not asserted.</li>
+    <li><span class="st">Live off the air</span><span class="dot"></span><b>First over-the-air decode.</b> With a radio on the bench, the system decoded a live transmission the instant the unit keyed up — full position and unit ID, from the sound card, with no base station and no SDR in the path. The capability was proven on the real channel, not only on recordings.</li>
+    <li><span class="st">Deployment</span><span class="dot"></span><b>Commodity hardware, offline map.</b> The same decoder was packaged two ways: as a pure-PC application, and as a self-contained embedded appliance on a sub-$100 router. Each serves an offline slippy map that any browser opens — units plotted by ID, with live / stale / alert states and an operator's own position — with nothing installed on the viewing device and no internet required.</li>
+    <li><span class="st">Hardening</span><span class="dot"></span><b>Margin at the edge.</b> A soft-decision upgrade to the error-correction stage — carrying the demodulator's analog confidence into the decoder instead of discarding it — yields roughly 3 dB of coding gain in simulation, extending usable range exactly where the weakest unit is about to drop off the map. A flat line-level front end removes capture-side distortion, a separate and additive improvement.</li>
+    <li><span class="st">Extension</span><span class="dot"></span><b>Location and voice, fused by ID.</b> Because the same stream carries both position and voice, a licensed vocoder lets the system add monitored audio — with the current speaker identified from the voice frame's own source address and highlighted on the map. Position and voice are joined by the one key they share: the unit ID.</li>
+  </ul>
+
+  <h2><span class="n">4</span>System Architecture</h2>
+  <p>The system is a clean layered pipeline. Each layer has one job and a defined interface to the next; the proven signal-processing core is a sealed module, and everything around it is standard plumbing.</p>
+
+  <div class="panel avoid">
+  <svg viewBox="0 0 720 300" width="100%" role="img" aria-label="Layered system architecture from over-the-air signal through decode and fusion to the presentation layer">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="#34435c"/>
+      </marker>
+      <style>
+        .bx{fill:#f4f6f9;stroke:#1b2a4a;stroke-width:1.4;}
+        .bxa{fill:#fff;stroke:#c0622a;stroke-width:1.6;}
+        .t{font-family:'Segoe UI',system-ui,Arial,sans-serif;fill:#1d2430;}
+        .tt{font-weight:700;font-size:11px;fill:#1b2a4a;}
+        .ts{font-size:8.3px;fill:#5b6882;}
+        .lbl{font-family:'Segoe UI',system-ui,Arial,sans-serif;font-size:7.6px;fill:#34435c;letter-spacing:.04em;}
+        .flow{stroke:#34435c;stroke-width:1.5;fill:none;}
+      </style>
+    </defs>
+
+    <!-- OTA -->
+    <path class="flow" d="M22,56 q18,-14 36,0" /><path class="flow" d="M30,60 q10,-9 20,0"/>
+    <line x1="40" y1="62" x2="40" y2="92" class="flow"/>
+    <text x="40" y="106" text-anchor="middle" class="lbl">OVER THE AIR</text>
+    <text x="40" y="116" text-anchor="middle" class="lbl">P25 Tier-1</text>
+
+    <!-- RF layer -->
+    <rect class="bx" x="86" y="40" width="120" height="86" rx="7"/>
+    <text x="146" y="66" text-anchor="middle" class="t tt">RF / Front End</text>
+    <text x="146" y="84" text-anchor="middle" class="t ts">Analog receiver</text>
+    <text x="146" y="96" text-anchor="middle" class="t ts">Detector-out tap</text>
+    <text x="146" y="108" text-anchor="middle" class="t ts">Audio interface</text>
+
+    <line x1="206" y1="83" x2="238" y2="83" class="flow" marker-end="url(#ar)"/>
+
+    <!-- Decode layer -->
+    <rect class="bxa" x="240" y="30" width="150" height="106" rx="7"/>
+    <text x="315" y="54" text-anchor="middle" class="t tt">Decode Engine</text>
+    <text x="315" y="71" text-anchor="middle" class="t ts">Symbol recovery (MMSE)</text>
+    <text x="315" y="83" text-anchor="middle" class="t ts">Frame sync &middot; NID (BCH)</text>
+    <text x="315" y="95" text-anchor="middle" class="t ts">FEC — soft-decision Viterbi</text>
+    <text x="315" y="107" text-anchor="middle" class="t ts">&rarr; Tier-1 NMEA + unit ID</text>
+    <text x="315" y="124" text-anchor="middle" class="t ts" style="fill:#14746b;">(opt.) voice &rarr; licensed vocoder</text>
+
+    <line x1="390" y1="83" x2="422" y2="83" class="flow" marker-end="url(#ar)"/>
+
+    <!-- Fusion -->
+    <rect class="bx" x="424" y="40" width="118" height="86" rx="7"/>
+    <text x="483" y="66" text-anchor="middle" class="t tt">Fusion</text>
+    <text x="483" y="84" text-anchor="middle" class="t ts">Keyed by unit ID</text>
+    <text x="483" y="96" text-anchor="middle" class="t ts">Position + speaker</text>
+    <text x="483" y="108" text-anchor="middle" class="t ts">Live / stale / alert</text>
+
+    <line x1="542" y1="83" x2="574" y2="83" class="flow" marker-end="url(#ar)"/>
+
+    <!-- Presentation -->
+    <rect class="bx" x="576" y="40" width="120" height="86" rx="7"/>
+    <text x="636" y="66" text-anchor="middle" class="t tt">Presentation</text>
+    <text x="636" y="84" text-anchor="middle" class="t ts">Offline map plotter</text>
+    <text x="636" y="96" text-anchor="middle" class="t ts">Voice monitor</text>
+    <text x="636" y="108" text-anchor="middle" class="t ts">Any browser</text>
+
+    <!-- deployment band -->
+    <rect x="86" y="170" width="610" height="96" rx="8" fill="#fff" stroke="#d7dde6" stroke-width="1.2"/>
+    <text x="100" y="189" class="t" style="font-weight:700;font-size:9px;fill:#1b2a4a;letter-spacing:.06em;">DEPLOYMENT — ONE ENGINE, TWO HOUSINGS</text>
+    <rect class="bx" x="100" y="200" width="285" height="54" rx="6"/>
+    <text x="242" y="220" text-anchor="middle" class="t tt" style="font-size:10px;">PC Application</text>
+    <text x="242" y="236" text-anchor="middle" class="t ts">Receiver + sound card + local GPS &rarr; browser map</text>
+    <rect class="bx" x="397" y="200" width="285" height="54" rx="6"/>
+    <text x="539" y="220" text-anchor="middle" class="t tt" style="font-size:10px;">Embedded Appliance</text>
+    <text x="539" y="236" text-anchor="middle" class="t ts">Sub-$100 router &middot; self-contained &middot; offline &middot; reboot-safe</text>
+
+    <text x="391" y="286" text-anchor="middle" class="lbl" style="font-size:8.6px;letter-spacing:.14em;fill:#1b2a4a;">RADIO &nbsp;&rarr;&nbsp; LIVE MAP</text>
+  </svg>
+  <div class="cap">Figure 1 — Layered architecture. The decode engine (amber) is the proven core; the RF, fusion, and presentation layers are standard interfaces around it. The same engine ships as a PC application or a self-contained appliance.</div>
+  </div>
+
+  <h3>4.1 &nbsp;RF / Front-End Layer</h3>
+  <p>An ordinary wideband analog receiver on the target channel, tapped at its flat detector/discriminator output and carried into a commodity audio interface (a USB sound card, or a line-level interface for best fidelity). No SDR, no RF design, no modification to any transmitting radio. <strong>The system is strictly receive-only.</strong></p>
+
+  <h3>4.2 &nbsp;Decode Engine (the sealed core)</h3>
+  <p>The recovered baseband is turned into standardized location data entirely in software: gain control and matched filtering, MMSE symbol-clock and level recovery, frame synchronization, network-ID decode, data-PDU assembly, and soft-decision convolutional error correction, yielding the Tier-1 NMEA position and the source individual ID. An optional branch extracts the voice frames and routes them to a <strong>licensed</strong> AMBE+2 vocoder for monitored audio. This layer is validated to the bit and treated as a fixed module.</p>
+
+  <h3>4.3 &nbsp;Fusion Layer</h3>
+  <p>Every report is filed under the transmitting radio's individual ID. Position reports and voice activity for the same unit are joined on that single key, which is why a talking unit's marker can light up on the map the instant it keys. Per-unit state (live, stale, alert on prolonged silence) is maintained here.</p>
+
+  <h3>4.4 &nbsp;Presentation Layer</h3>
+  <p>An offline map server renders units over the operator's own imagery — no cloud, no cellular, usable in a dead zone — with each unit plotted by ID, an incident-commander overview, the operator's own position, and (with the voice option) a current-speaker indicator and audio level. The display is any web browser on any device; nothing is installed on the viewer.</p>
+
+  <h2><span class="n">5</span>Differentiators</h2>
+  <table>
+    <tr><th style="width:30%">Property</th><th>Why it matters</th></tr>
+    <tr><td><b>Passive, zero cooperation</b></td><td>Needs only a receiver on the channel — no base station, no network, no change to the fleet's system.</td></tr>
+    <tr><td><b>No SDR</b></td><td>Uses the receiver the agency already demodulates with; the signal processing is ordinary software on ordinary hardware.</td></tr>
+    <tr><td><b>Standards-based &amp; vendor-neutral</b></td><td>Decodes the open TIA-102 Tier-1 location format, so it is not tied to any one manufacturer's scheme.</td></tr>
+    <tr><td><b>Disconnected operation</b></td><td>Offline maps and local processing — fully functional with no internet and no cellular.</td></tr>
+    <tr><td><b>Commodity cost</b></td><td>A PC, or a self-contained appliance on a sub-$100 router. The display is a cheap, swappable consumable.</td></tr>
+    <tr><td><b>Soft-decision margin</b></td><td>~3 dB of coding gain keeps the weakest, farthest unit plotting instead of dropping off — margin where safety is decided.</td></tr>
+    <tr><td><b>Location + voice, fused</b></td><td>One capture yields both; the unit ID welds the voice layer to the position layer.</td></tr>
+  </table>
+
+  <h2><span class="n">6</span>Operating Principles</h2>
+  <ul>
+    <li><strong>Receive-only, always.</strong> The system never transmits and never alters a radio. It listens.</li>
+    <li><strong>Validate against ground truth.</strong> Decode correctness is measured by diffing against an independent reference, not assumed from "it looks right."</li>
+    <li><strong>Protect the operator at the margin.</strong> Monitored audio is quality-gated before the vocoder: marginal frames are muted rather than played as artifacts, the call is held patiently through brief fades, and the threshold is conservative but tunable. Marginal signals are normal; the system degrades gracefully instead of failing loudly.</li>
+    <li><strong>One coherent build.</strong> Proven algorithm kernels are sealed and reused; the plumbing around them is purpose-built, not patched together.</li>
+  </ul>
+
+  <h2><span class="n">7</span>Honest Boundaries &amp; Risks</h2>
+  <ul>
+    <li><strong>It is a receiver.</strong> It decodes what it adequately receives; coverage is bounded by RF reality. The soft-decision margin extends the edge — it does not resurrect a truly dead signal.</li>
+    <li><strong>Not a replacement where infrastructure exists.</strong> Where an agency runs a full system AVL, that remains the authoritative source. Universal Traveler's value is the infrastructure-free, disconnected, and universal cases — and as an independent cross-check.</li>
+    <li><strong>Encryption is respected.</strong> The system reads the standardized <em>location</em> data present in the clear; it is not a cipher-breaking tool and makes no such claim.</li>
+    <li><strong>Deployment is policy-governed.</strong> Passive monitoring of location is a capability with clear operational value for an agency's own personnel safety and equally clear policy considerations; governance is a deployment decision, called out here deliberately rather than buried.</li>
+  </ul>
+
+  <h2><span class="n">8</span>Status &amp; Roadmap</h2>
+  <p><strong>Proven today, end to end:</strong> live over-the-air Tier-1 decode on commodity hardware; the offline map plotter on both a PC and a self-contained appliance; the soft-decision decoder, built and simulation-verified. <strong>In progress:</strong> field measurement of the soft-decision margin against a calibrated reference; integration of the licensed-vocoder voice option with the current-speaker display. <strong>Productization path:</strong> package the appliance build, formalize the front-end bill of materials, and define the operator-facing configuration.</p>
+
+  <div class="foot">
+    <span>Universal Traveler &middot; Architecture Overview &middot; Rev A</span>
+    <span>Concept proposal — J. Gaddy with Claude (Anthropic)</span>
+  </div>
+
+</div>
+</body>
+</html>

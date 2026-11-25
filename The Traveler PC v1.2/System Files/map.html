@@ -1,0 +1,245 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>The Traveler PC - Live Units</title>
+<link rel="stylesheet" href="/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+#map{position:fixed;inset:0;background:#0b0f14}
+#bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;gap:10px;pointer-events:none;
+ height:calc(46px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);
+ padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
+ background:rgba(17,22,29,.82);border-bottom:1px solid #1e2732;font-size:14px}
+#title{font-weight:700;letter-spacing:.5px;color:#7fd1ff;white-space:nowrap}
+#mapname{color:#9fb3c8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:32vw}
+#status{margin-left:auto;display:flex;align-items:center;gap:8px;color:#9fb3c8}
+#maps,#alias{pointer-events:auto;cursor:pointer;background:#17344a;color:#bfe0ff;border:1px solid #255277;border-radius:7px;
+ padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+#alias{background:#1f3a52}
+#dot{width:9px;height:9px;border-radius:50%;background:#2ecc71;box-shadow:0 0 7px #2ecc71}
+#dot.bad{background:#e74c3c;box-shadow:0 0 7px #e74c3c}
+#menu{position:fixed;z-index:650;top:calc(44px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));
+ width:min(320px,86vw);max-height:70vh;overflow:auto;display:none;
+ background:rgba(13,20,28,.97);border:1px solid #27404f;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+#menu h4{font-size:12px;letter-spacing:.6px;color:#7f98ad;font-weight:700;padding:11px 14px 6px;text-transform:uppercase}
+#menu a{display:block;padding:10px 14px;color:#e6eef6;text-decoration:none;border-top:1px solid #182530;font-size:14px}
+#menu a .sub{display:block;color:#7f98ad;font-size:12px;margin-top:2px}
+#menu a.cur{background:#14304a;color:#7fd1ff}
+#menu a:active{background:#15222e}
+#amenu{position:fixed;z-index:650;top:calc(44px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));
+ width:min(340px,90vw);max-height:72vh;overflow:auto;display:none;padding:0 0 8px;
+ background:rgba(13,20,28,.98);border:1px solid #27404f;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+#amenu h4{font-size:12px;letter-spacing:.6px;color:#7f98ad;font-weight:700;padding:11px 14px 6px;text-transform:uppercase}
+#amenu .row{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid #182530}
+#amenu .uid{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#7fd1ff;min-width:84px;white-space:nowrap}
+#amenu input{flex:1;min-width:0;background:#0b141c;color:#e6eef6;border:1px solid #27404f;border-radius:6px;padding:6px 8px;font-size:14px}
+#amenu .act{display:flex;gap:8px;padding:10px 12px 2px}
+#asave{cursor:pointer;background:#1f6b3a;border:1px solid #3fae63;border-radius:7px;padding:7px 12px;font-size:13px;font-weight:700;color:#eafff0}
+#amsg{color:#7f98ad;font-size:12px;padding:5px 14px 0}
+#amenu .empty{color:#7f98ad;font-size:13px;padding:10px 14px;line-height:1.4}
+#splash{position:fixed;inset:0;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ background:radial-gradient(120% 90% at 50% 18%,#15314a 0%,#0b0f14 72%);transition:opacity .6s ease;text-align:center;padding:20px}
+#splash.hide{opacity:0;pointer-events:none}
+#splash .brand{margin-top:14px;font-weight:800;letter-spacing:2px;font-size:26px;color:#eaf4ff}
+#splash .model{font-weight:700;letter-spacing:1px;font-size:14px;color:#7fd1ff;margin-top:3px}
+#splash .tag{color:#9fb3c8;font-size:12.5px;margin-top:11px;max-width:300px}
+#splash .sig{color:#c9a24b;font-size:12px;letter-spacing:.4px;margin-top:22px;font-style:italic}
+#banner{position:fixed;left:0;right:0;z-index:645;display:none;text-align:center;font-weight:700;color:#fff;
+ background:#c0392b;padding:9px;top:calc(46px + env(safe-area-inset-top,0px))}
+.ulbl{background:rgba(11,15,20,.74);border:none;color:#fff;font-weight:600;font-size:13px;box-shadow:none;padding:1px 6px;border-radius:4px}
+.ulbl::before{display:none}
+.leaflet-container{background:#0b0f14}
+.leaflet-top{top:calc(52px + env(safe-area-inset-top,0px))}
+#amenu .newid{flex:0 0 108px;min-width:0}
+#amenu .act .alt{background:#17344a;border:1px solid #255277;color:#bfe0ff}
+#menu a.pick{color:#7fd1ff;font-weight:700}
+</style></head><body>
+<div id="map"></div>
+<div id="bar"><span id="title">THE TRAVELER PC</span><span id="mapname"></span>
+<span id="status"><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
+<div id="menu"></div>
+<div id="amenu"></div>
+<div id="banner"></div>
+<div id="splash">
+<svg width="152" height="138" viewBox="0 0 152 138" aria-label="The Traveler PC — fire-lookout tower over a sunset ridge">
+ <circle cx="76" cy="60" r="34" fill="#f2a63b" opacity=".18"/><circle cx="76" cy="64" r="21" fill="#f2a63b" opacity=".42"/>
+ <path d="M0 106 L30 94 L62 102 L92 90 L122 100 L152 92 L152 138 L0 138 Z" fill="#0e2233"/>
+ <g stroke="#1c3a52" stroke-width="3" fill="none" stroke-linecap="round">
+  <path d="M60 102 L68 54"/><path d="M92 102 L84 54"/><path d="M66 82 L86 82"/><path d="M63 68 L89 68"/></g>
+ <rect x="60" y="38" width="32" height="20" rx="2" fill="#13263a" stroke="#2b5574" stroke-width="2"/>
+ <rect x="64" y="42" width="9" height="11" fill="#ffd166"/><rect x="79" y="42" width="9" height="11" fill="#ffd166"/>
+ <path d="M55 38 L76 28 L97 38 Z" fill="#1c3a52"/><path d="M76 28 L76 18" stroke="#2b5574" stroke-width="2"/>
+ <circle cx="76" cy="17" r="2.4" fill="#e85d3b"/></svg>
+<div class="brand">THE TRAVELER PC</div>
+<div class="model">Radio &rarr; Live Map</div>
+<div class="tag">P25 GPS off the air &middot; your own offline maps &middot; no cloud</div>
+<div class="sig">built by Claude McNally</div>
+</div>
+<script src="/leaflet.js"></script>
+<script>
+// This page shows ONE map. The router has no default: root ("/") shows whichever map sorts first
+// (crews order by file name, e.g. "1_" / "a_"); a named map lives at /m/<slug>. Every map is equal.
+var PATHBASE = location.pathname.replace(/\/(map|index\.html)\/?$/,"").replace(/\/+$/,"");
+var atRoot = (PATHBASE === "");
+var TILEBASE = null;              // "/m/<slug>" of the map actually shown; set once /maps.json loads
+var map = L.map("map",{zoomControl:true, attributionControl:false});
+map.setView([30.40,-81.93], 12);   // sane default; re-centers on the map / units once loaded
+var markers={}, tilesAdded=false, userMoved=false;
+var GREEN="#2ecc71", AMBER="#f1c40f", SELF="#17c3b2", SELF_ID="LOOKOUT";
+// The map frames itself once on load; after that the user owns the view. Units are drawn where
+// they are but NEVER move the display - IDs key up from all over and must not drag it around.
+// Track any user pan/zoom so even the one-time load-framing never yanks a view they've grabbed.
+function markMoved(){ userMoved=true; }
+map.on("dragstart", markMoved);
+map.getContainer().addEventListener("wheel", markMoved, {passive:true});
+function esc(s){return (s+"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+function setupTiles(meta){
+  if(tilesAdded || !meta.has_tiles || TILEBASE===null) return;
+  tilesAdded=true;
+  var b=meta.bounds, sw=[b[1],b[0]], ne=[b[3],b[2]];
+  L.tileLayer(TILEBASE+"/tiles/{z}/{x}/{y}",{minZoom:meta.minzoom, maxZoom:22, maxNativeZoom:meta.maxzoom, bounds:[sw,ne],
+    errorTileUrl:"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="}).addTo(map);
+  map.setMaxBounds([[sw[0]-0.08,sw[1]-0.08],[ne[0]+0.08,ne[1]+0.08]]);
+  // Frame the whole map once on load. There is no auto-fit to units: IDs pop in from all over,
+  // so they must never move the display. Skip even this if the user already moved.
+  if(!userMoved){ map.fitBounds([sw,ne]); }
+}
+// Keep asking for this map's tiles until its drive is ready (survives a cold boot where the USB
+// auto-mount finishes AFTER this service starts: the map appears the instant it mounts).
+function pollMeta(){
+  if(TILEBASE===null) return;           // no map resolved yet (none on the drive) - loadMaps retries
+  fetch(TILEBASE+"/meta.json",{cache:"no-store"}).then(function(r){return r.json()}).then(function(meta){
+    if(meta.has_tiles) setupTiles(meta); else setTimeout(pollMeta,4000);
+  }).catch(function(){ setTimeout(pollMeta,4000); });
+}
+// Maps menu + which map this page shows. No default: root shows whichever sorts first.
+function loadMaps(){
+  fetch("/maps.json",{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+    var maps=d.maps||[], cur=null;
+    if(atRoot){ cur = maps[0] || null; }    // root -> first map alphabetically (named by the crew)
+    else { maps.forEach(function(mp){ if(mp.base.replace(/\/+$/,"")===PATHBASE) cur=mp; }); }
+    if(cur && TILEBASE===null){ TILEBASE = cur.base.replace(/\/+$/,""); pollMeta(); }  // first resolve
+    var html='<h4>Maps</h4>';
+    if(maps.length===0){ html+='<a class="cur"><span class="sub">No maps yet &middot; use "Pick a map" below to choose a .tpkx / .mbtiles file</span></a>'; }
+    maps.forEach(function(mp){
+      var isCur = cur && (mp.base===cur.base);
+      html+='<a href="'+mp.base+'" class="'+(isCur?"cur":"")+'">'+esc(mp.name)+'</a>';
+    });
+    html+='<a href="#" class="pick" id="pickmap">&#128193; Pick a map (.tpkx)&hellip;</a>';
+    document.getElementById("menu").innerHTML=html;
+    var pf=document.getElementById("pickmap"); if(pf) pf.onclick=changeMap;
+    document.getElementById("mapname").textContent = cur ? "· "+cur.name : "";
+  }).catch(function(){});
+}
+// Let the user point The Traveler PC at ANY folder of maps on this PC (remembered).
+// /pick-folder opens a native folder dialog on this PC; then we reload to show the new folder.
+function changeMap(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  var mn=document.getElementById("menu");
+  mn.innerHTML='<h4>Maps</h4><a class="cur"><span class="sub">Opening the map picker on this PC &mdash; choose a .tpkx / .mbtiles file&hellip;</span></a>';
+  fetch("/pick-map").then(function(r){return r.json()}).then(function(d){
+    if(d && d.ok && d.slug){ location.href = "/m/"+d.slug+"/"; }   // jump to the picked map
+    else { loadMaps(); }                                           // cancelled - refresh the list
+  }).catch(function(){ loadMaps(); });
+}
+document.getElementById("maps").onclick=function(e){
+  e.stopPropagation();
+  var m=document.getElementById("menu");
+  m.style.display = (m.style.display==="block") ? "none" : "block";
+};
+document.addEventListener("click",function(){ document.getElementById("menu").style.display="none"; });
+
+function tick(){
+  fetch("/units.json",{cache:"no-store"}).then(function(r){return r.json()}).then(update)
+  .catch(function(){ document.getElementById("dot").className="bad";
+    document.getElementById("clock").textContent="reconnecting"; });
+}
+function update(d){
+  document.getElementById("dot").className="";
+  document.getElementById("clock").textContent=d.server_time;
+  document.getElementById("count").textContent=d.count+(d.count==1?" unit":" units");
+  var ban=document.getElementById("banner");
+  if(d.alarm&&d.alarm.down){ban.style.display="block";ban.textContent="⚠ RADIO LINK DOWN — "+d.alarm.why;}
+  else ban.style.display="none";
+  var seen={}, pts=[];
+  d.units.forEach(function(u){
+    seen[u.id]=1; var ll=[u.lat,u.lon], self=(u.id===SELF_ID);
+    var col=self?SELF:(u.stale?AMBER:GREEN);
+    var lab=self?("MY POSITION · "+u.age):(u.name+" · "+u.age+(u.stale?" (stale)":""));
+    pts.push(ll);
+    if(markers[u.id]){ markers[u.id].setLatLng(ll).setStyle({color:col,fillColor:col}); markers[u.id].setTooltipContent(lab); }
+    else { var m=L.circleMarker(ll,{radius:self?9:7,color:col,fillColor:col,fillOpacity:1,weight:self?3:2}).addTo(map);
+           m.bindTooltip(lab,{permanent:true,direction:"right",className:"ulbl",offset:[8,0]}); markers[u.id]=m; }
+  });
+  Object.keys(markers).forEach(function(id){ if(!seen[id]){ map.removeLayer(markers[id]); delete markers[id]; }});
+  // (No auto-pan to units: they key up from everywhere and must never move the display.)
+}
+loadMaps();                    // resolves which map to show, then kicks pollMeta() for its tiles
+tick(); setInterval(tick,3000);
+setInterval(loadMaps,30000);   // pick up newly-added maps without a reload
+
+// ---- Alias: rename a raw unit id to a crew name, right from the map ----
+// Wires to units_kml's token-guarded /admin/aliases (default token "lookout").
+// aliases.json is read live, so a saved name shows on the map within one refresh.
+var ATOKEN = "lookout";
+function renderAlias(){
+  var box=document.getElementById("amenu");
+  Promise.all([
+    fetch("/admin/aliases?token="+ATOKEN).then(function(r){return r.json()}).catch(function(){return {aliases:{}};}),
+    fetch("/units.json",{cache:"no-store"}).then(function(r){return r.json()}).catch(function(){return {units:[]};})
+  ]).then(function(res){
+    var al=(res[0]&&res[0].aliases)||{}, units=(res[1]&&res[1].units)||[], ids={};
+    units.forEach(function(u){ if(u.id!==SELF_ID) ids[u.id]=1; });   // fleet radios only (not MY POSITION)
+    Object.keys(al).forEach(function(k){ ids[k]=1; });               // keep names for units not heard right now
+    var keys=Object.keys(ids).sort();
+    var html='<h4>Name your units</h4>';
+    keys.forEach(function(id){
+      html+='<div class="row"><span class="uid">'+esc(id)+'</span>'+
+            '<input data-id="'+esc(id)+'" value="'+esc(al[id]||"")+'" placeholder="crew name" maxlength="64"></div>';
+    });
+    html+='<div class="row addrow"><input class="newid" placeholder="unit ID" maxlength="24" inputmode="numeric">'+
+          '<input class="newname" placeholder="crew name" maxlength="64"></div>';
+    html+='<div class="act"><button id="asave">Save names</button></div>'+
+          '<div id="amsg">Type any unit ID above to name it before it ever transmits.</div>';
+    box.innerHTML=html;
+    var s=document.getElementById("asave"); if(s) s.onclick=saveAlias;
+  });
+}
+function saveAlias(){
+  var tbl={};
+  Array.prototype.forEach.call(document.querySelectorAll("#amenu input[data-id]"),function(inp){
+    var id=inp.getAttribute("data-id"), nm=(inp.value||"").trim();
+    if(nm) tbl[id]=nm;
+  });
+  var nid=document.querySelector("#amenu .newid"), nn=document.querySelector("#amenu .newname");
+  if(nid && nid.value.trim() && nn && nn.value.trim()){ tbl[nid.value.trim()]=nn.value.trim(); }
+  var msg=document.getElementById("amsg"); if(msg) msg.textContent="saving ...";
+  fetch("/admin/aliases?token="+ATOKEN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(tbl)})
+   .then(function(r){return r.json()}).then(function(d){
+     if(d&&d.ok){ tick(); renderAlias(); }
+     else if(msg) msg.textContent = "Could not save: "+((d&&d.error)||"check the server");
+   }).catch(function(e){ if(msg) msg.textContent="Could not save: "+e; });
+}
+document.getElementById("alias").onclick=function(e){
+  e.stopPropagation();
+  document.getElementById("menu").style.display="none";
+  var b=document.getElementById("amenu");
+  if(b.style.display==="block"){ b.style.display="none"; return; }
+  b.style.display="block"; renderAlias();
+};
+document.getElementById("amenu").addEventListener("click",function(e){ e.stopPropagation(); });   // clicks inside stay open
+document.addEventListener("click",function(){ document.getElementById("amenu").style.display="none"; });
+document.getElementById("maps").addEventListener("click",function(){ document.getElementById("amenu").style.display="none"; });
+
+// ---- Claude McNally startup badge: the maker's nameplate on screen start, then it clears to the map ----
+(function(){
+  var s=document.getElementById("splash"); if(!s) return;
+  var shown=false; try{ shown=sessionStorage.getItem("tpc_badge")==="1"; }catch(e){}
+  if(shown){ s.style.display="none"; return; }   // once per session (a folder-change reload won't re-badge)
+  try{ sessionStorage.setItem("tpc_badge","1"); }catch(e){}
+  function go(){ s.classList.add("hide"); setTimeout(function(){ s.style.display="none"; },700); }
+  s.addEventListener("click", go);
+  setTimeout(go, 2600);
+})();
+</script></body></html>
