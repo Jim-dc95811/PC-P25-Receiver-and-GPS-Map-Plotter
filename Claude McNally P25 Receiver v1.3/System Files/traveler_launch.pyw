@@ -94,13 +94,42 @@ class App:
         root.protocol("WM_DELETE_WINDOW", self.stop)
         self.start()
         threading.Thread(target=self._open_browser, daemon=True).start()
+        try:
+            root.after(2000, self._health)       # watch the background processes; report if one dies
+        except Exception:
+            pass
 
     def _spawn(self, script, logname, *args):
-        log = open(os.path.join(HERE, logname), "w", buffering=1, encoding="utf-8", errors="replace")
-        return subprocess.Popen([sys.executable, os.path.join(HERE, script), *args],
-                                cwd=HERE, creationflags=NO_WINDOW,
-                                stdout=log, stderr=subprocess.STDOUT,
-                                stdin=subprocess.DEVNULL)
+        try:
+            log = open(os.path.join(HERE, logname), "w", buffering=1, encoding="utf-8", errors="replace")
+        except OSError:
+            log = None
+        try:
+            return subprocess.Popen([sys.executable, os.path.join(HERE, script), *args],
+                                    cwd=HERE, creationflags=NO_WINDOW,
+                                    stdout=(log or subprocess.DEVNULL), stderr=subprocess.STDOUT,
+                                    stdin=subprocess.DEVNULL)
+        except Exception as e:
+            try: self.status.config(text="could not start %s (%s)" % (script, e), fg="#ff8a8a")
+            except Exception: pass
+            return None
+
+    def _health(self):
+        # The decoder + map server run windowless; if one dies the window must not keep
+        # saying "running". Report it (with the log to check) instead of lying. Wrapped so
+        # the watcher itself can never break the control window.
+        try:
+            dead = []
+            if self.srv is not None and self.srv.poll() is not None: dead.append("map server")
+            if self.dec is not None and self.dec.poll() is not None: dead.append("decoder")
+            if dead:
+                self.status.config(text="stopped: %s  ·  see System Files logs" % ", ".join(dead), fg="#ff8a8a")
+        except Exception:
+            pass
+        try:
+            self.root.after(2000, self._health)
+        except Exception:
+            pass
 
     def cur_device(self):
         try:
@@ -123,7 +152,7 @@ class App:
         if dev is not None:
             args.append("--device=%d" % dev)
         self.dec = self._spawn("traveler_pc.py", "decoder_log.txt", *args)
-        self.status.config(text="running  ·  map at %s" % URL)
+        self.status.config(text="running  ·  map at %s" % URL, fg="#9fb3c8")
 
     def _open_browser(self):
         time.sleep(3)
