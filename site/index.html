@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PC P25 Receiver &amp; GPS Map Plotter</title>
+<meta name="description" content="Hear your P25 fleet and see where every unit is — off the air, on a plain PC. Free, offline, receive-only.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a0f16; --bg2:#0e1622; --panel:#121d2b; --line:#1e2d40;
+  --ink:#e8f0f9; --mut:#9fb3c8; --dim:#6b7f95;
+  --cyan:#49c7ff; --cyan2:#7fd1ff; --green:#39d98a; --gold:#e3b23c; --red:#ef6a56;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{width:100%;max-width:1040px;margin:0 auto;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1,h2,h3,.brand{font-family:Poppins,sans-serif;text-wrap:balance}
+a{color:var(--cyan2);text-decoration:none}
+a:hover{color:#fff}
+
+/* hero */
+header{position:relative;padding-block:72px 54px;
+  background:radial-gradient(130% 90% at 50% -10%,#15314a 0%,var(--bg) 62%);border-bottom:1px solid var(--line)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);font-weight:600;border:1px solid #3a3320;background:rgba(227,178,60,.08);
+  padding:5px 12px;border-radius:30px;margin-bottom:20px}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+h1{font-size:clamp(30px,6vw,52px);font-weight:800;letter-spacing:-.5px;line-height:1.08}
+h1 .cm{color:var(--cyan2);display:block;font-size:.5em;font-weight:700;letter-spacing:.5px;margin-bottom:8px;color:var(--dim)}
+.lede{color:var(--mut);font-size:clamp(16px,2.4vw,20px);max-width:640px;margin-top:18px}
+.cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-family:Poppins,sans-serif;font-size:15px;
+  padding:13px 22px;border-radius:11px;border:1px solid transparent;transition:transform .12s ease,background .12s ease}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,#2aa8e8,#1b86c4);color:#04131f;border-color:#39b0ec}
+.btn.primary:hover{background:linear-gradient(180deg,#3fb6f2,#1f91d2);color:#021018}
+.btn.ghost{background:#13202f;color:var(--cyan2);border-color:var(--line)}
+.btn.ghost:hover{border-color:#2f4a66;color:#fff}
+.tags{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--dim);font-size:13.5px;font-weight:500}
+.tags b{color:var(--mut);font-weight:600}
+
+.showcase{border-bottom:1px solid var(--line)}
+.showcase .wrap{padding-top:40px;padding-bottom:50px}
+.showcase figure{margin:0}
+.showcase img{width:100%;display:block;border-radius:16px;border:1px solid #27425e;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.showcase figcaption{color:var(--mut);font-size:14px;text-align:center;margin-top:14px}
+.showcase figcaption b{color:var(--cyan2);font-weight:600}
+section{padding-block:56px;border-bottom:1px solid var(--line)}
+.kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);font-weight:600;margin-bottom:10px}
+h2{font-size:clamp(23px,3.6vw,32px);font-weight:700;letter-spacing:-.3px}
+.sub{color:var(--mut);margin-top:10px;max-width:680px}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:22px}
+.card .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;margin-bottom:14px;
+  background:#0e1a27;border:1px solid #22384f}
+.card h3{font-size:17px;font-weight:700;margin-bottom:7px}
+.card p{color:var(--mut);font-size:14.5px}
+.card .ic svg{width:22px;height:22px}
+
+.plug{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+.row{display:flex;gap:14px;background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:16px 18px}
+.row .n{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;
+  font-family:Poppins;background:#10202e;color:var(--cyan2);border:1px solid #22384f;font-size:14px}
+.row h3{font-size:15.5px;font-weight:700}
+.row p{color:var(--mut);font-size:13.5px;margin-top:2px}
+.ro{color:var(--gold);font-weight:600}
+
+.maps{background:linear-gradient(180deg,#101d2b,#0c1622);border:1px solid #23384f;border-radius:16px;
+  padding:28px;margin-top:26px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.maps .txt{flex:1;min-width:260px}
+.maps h3{font-size:19px;font-weight:700;margin-bottom:8px}
+.maps p{color:var(--mut);font-size:15px}
+.maps ul{color:var(--mut);font-size:14px;margin:12px 0 0 18px}
+.maps li{margin:4px 0}
+
+.how{margin-top:26px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:24px 26px}
+.how p{color:var(--mut);font-size:15.5px}
+.how .flow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px;font-family:Poppins;font-weight:600;font-size:13.5px}
+.chip{background:#0e1a27;border:1px solid #243a52;color:var(--cyan2);padding:7px 13px;border-radius:9px}
+.arr{color:var(--dim)}
+
+.status li{list-style:none;color:var(--mut);font-size:15px;margin:10px 0;padding-left:28px;position:relative}
+.status li::before{content:"";position:absolute;left:0;top:7px;width:14px;height:14px;border-radius:50%;
+  background:rgba(57,217,138,.15);border:1px solid var(--green)}
+.status li.k::after{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+footer{padding-block:40px 60px;color:var(--dim);font-size:13.5px}
+footer .sig{color:var(--gold);font-style:italic;font-family:Poppins}
+footer .ln{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px 18px}
+
+@media(max-width:760px){
+  .cards{grid-template-columns:1fr}
+  .plug{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow"><span class="dot"></span> Proven live · off the air · receive-only</div>
+    <h1><span class="cm">Claude McNally&rsquo;s</span>PC P25 Receiver &amp; GPS Map Plotter</h1>
+    <p class="lede">Hear your P25 fleet and see where every unit is — pulled straight out of the air by a plain PC and a sound card, plotted on <b style="color:var(--ink)">your own offline map</b>. No SDR, no base station, no internet, no cloud.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter/raw/main/Claude_McNally_P25_Receiver_v1.3.zip">⬇ Download v1.3</a>
+      <a class="btn ghost" href="https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter/blob/main/Claude%20McNally%20P25%20Receiver%20v1.3/Claude%20McNally%20P25%20Receiver%20User%20Guide.pdf">📖 User guide</a>
+      <a class="btn ghost" href="https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter">◆ Source on GitHub</a>
+    </div>
+    <div class="tags">
+      <span><b>Tier-1 GPS</b> decoded in software</span>
+      <span><b>Full voice</b> + current speaker</span>
+      <span><b>Your own</b> offline maps</span>
+      <span><b>Free</b> &amp; open</span>
+    </div>
+  </div>
+</header>
+
+<section class="showcase">
+  <div class="wrap">
+    <figure>
+      <img src="images/live_z20.jpg" alt="The live receiver — three P25 units (MY POSITION plus two named fleet units) plotted on Z20 offline satellite imagery, with Listen, Alias and Maps controls in the bar.">
+      <figcaption>Live, off the air — your own position and the fleet on your own Z20 imagery. Tap <b>Listen</b> to hear whoever keys up.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">What it does</div>
+    <h2>One sound card. The whole fleet, located and heard.</h2>
+    <p class="sub">Every P25 radio already transmits its own position in a standardized, open format — and its voice alongside it. This receiver reads both off the radio&rsquo;s detector audio and fuses them by the radio&rsquo;s own ID, so the unit you hear is the dot that lights up.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#49c7ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+        <h3>Live GPS map</h3>
+        <p>Each unit plots on your offline imagery by its radio ID, with live / stale colors. Your own position rides on the same map from a USB GPS.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#39d98a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></div>
+        <h3>Hear the fleet</h3>
+        <p>A pure-software vocoder decodes the voice — no dongle, no SDR. Tap <b style="color:var(--ink)">Listen</b> and <b style="color:var(--ink)">Current Speaker</b> lights the talking unit on the map.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#e3b23c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3z"/><path d="M9 3v15M15 6v15"/></svg></div>
+        <h3>Your own maps</h3>
+        <p>Nothing to subscribe to and nothing that phones home — it shows the offline <code style="color:var(--cyan2)">.tpkx</code>/<code style="color:var(--cyan2)">.mbtiles</code> maps you build yourself, for your area.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Set it up</div>
+    <h2>What you plug in</h2>
+    <div class="plug">
+      <div class="row"><div class="n">1</div><div><h3>A USB sound card → the radio&rsquo;s detector audio</h3><p>The flat <i>detected</i> audio (e.g. a Kenwood NX-700 DEO pin 19, radio set WIDE). This one feed carries both the positions and the voice.</p></div></div>
+      <div class="row"><div class="n">2</div><div><h3>A USB GPS → the PC</h3><p>For your own &ldquo;you are here&rdquo; dot. Optional — the fleet still plots without it.</p></div></div>
+      <div class="row"><div class="n">3</div><div><h3>Your offline maps</h3><p>A <code>.tpkx</code> or <code>.mbtiles</code> for your area, picked from anywhere on the PC.</p></div></div>
+      <div class="row"><div class="n">4</div><div><h3>Windows + Python 3</h3><p>Double-click one <code>.bat</code>; the first run installs three small helpers, then it runs fully offline.</p></div></div>
+    </div>
+    <p class="sub" style="margin-top:20px">The radio is only ever <span class="ro">received</span> — this receiver never transmits or alters a radio.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Map sourcing</div>
+    <h2>Make your maps yourself — free</h2>
+    <div class="maps">
+      <div class="txt">
+        <h3>ArcGIS Earth Unlocked</h3>
+        <p>This receiver reads offline maps you build once with a free, open companion toolset — no GIS background needed, nothing that phones home.</p>
+        <ul>
+          <li><b style="color:var(--ink)">MBTiles → TPKX converter</b> + <b style="color:var(--ink)">Master 4</b> — turn map tiles into the <code>.tpkx</code> packages this receiver reads.</li>
+          <li><b style="color:var(--ink)">Picture World Maker</b>, point &amp; parcel tools, and more.</li>
+        </ul>
+      </div>
+      <div><a class="btn ghost" href="https://jim-dc95811.github.io/ArcGIS-Earth-Unlocked/">Get the map tools →</a></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Under the hood</div>
+    <h2>How it works</h2>
+    <div class="how">
+      <div class="flow">
+        <span class="chip">Radio detector audio</span><span class="arr">→</span>
+        <span class="chip">USB sound card</span><span class="arr">→</span>
+        <span class="chip">Software decode</span><span class="arr">→</span>
+        <span class="chip">Offline map + voice</span>
+      </div>
+      <p>An FM radio already demodulates the RF to a flat four-level baseband at its detector output — the hard radio work is done. This receiver takes that off a sound card and decodes the standardized P25 <b style="color:var(--ink)">Tier-1 location data</b> in software: symbol recovery, framing, and error correction, down to the position and the transmitting radio&rsquo;s individual ID. The same frames carry <b style="color:var(--ink)">voice</b>, decoded by a pure-software IMBE vocoder, with the link-control ID naming the current speaker. No SDR, no re-demodulation, no infrastructure.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Status</div>
+    <h2>Proven live, hardened for the field</h2>
+    <ul class="status" style="margin-top:22px">
+      <li class="k">Tier-1 GPS decode off the air, the offline map plotter, and your own position — all on a normal PC.</li>
+      <li class="k">Full voice decode with the current speaker identified and lit on the map, nothing installed on the viewer.</li>
+      <li class="k">Voice is quality-gated so marginal signals never play as garbage; the whole key-up is reconstructed and played clean.</li>
+      <li class="k">Field-hardened: a bad burst can&rsquo;t stall the decoder, a yanked sound card recovers on its own, memory stays flat over long runs.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="sig">an original, built by Claude McNally</div>
+    <div>Claude McNally&rsquo;s PC P25 Receiver and GPS Map Plotter — radio → live map and live voice, offline, read-only.</div>
+    <div class="ln">
+      <a href="https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter">GitHub</a>
+      <a href="https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter/raw/main/Claude_McNally_P25_Receiver_v1.3.zip">Download</a>
+      <a href="https://jim-dc95811.github.io/ArcGIS-Earth-Unlocked/">Make your maps</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
