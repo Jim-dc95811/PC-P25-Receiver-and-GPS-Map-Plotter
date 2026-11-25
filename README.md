@@ -11,8 +11,8 @@ No SDR. No base station. No internet, no cell, no cloud. No special dongle, no p
 - **⬇️ Download:** [`Claude_McNally_P25_Receiver_v1.3.zip`](Claude_McNally_P25_Receiver_v1.3.zip)
 - **📖 User guide:** [`Claude McNally P25 Receiver v1.3/Claude McNally P25 Receiver User Guide.pdf`](Claude%20McNally%20P25%20Receiver%20v1.3/Claude%20McNally%20P25%20Receiver%20User%20Guide.pdf)
 
-![The live receiver — three P25 units (your own position plus two named fleet units) plotted on Z20 offline satellite imagery, with Listen, Alias and Maps controls](images/live_z20.jpg)
-*Live, off the air: your own position and the fleet on your own Z20 imagery — tap **Listen** to hear whoever keys up.*
+![The live receiver in action — Listening active, the current speaker (Jax 25) named and ringed on the map, three units on Z20 offline imagery](images/live_z20.jpg)
+*Live, off the air — and you can hear it: the current speaker named and lit while your own position and the fleet ride your own Z20 imagery.*
 
 ---
 
