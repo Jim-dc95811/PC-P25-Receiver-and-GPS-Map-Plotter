@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-THE TRAVELER PC  -  decode P25 Tier-1 GPS location LIVE off the air, on a PC.
+Claude McNally's PC P25 Receiver and GPS Map Plotter ("the McNally")
+  -  decode P25 Tier-1 GPS location AND voice LIVE off the air, on a PC.
 
 The invention set free of the router: on any PC that can run Python, plug a USB
 sound card into the radio's detector audio and a Garmin USB into the PC, and the
@@ -340,9 +341,9 @@ def pick_device(sd, forced=None):
 
 def _badge():
     print("=" * 60)
-    print("  THE TRAVELER PC   -   Radio  ->  Live Map        v%s" % VERSION)
-    print("  P25 GPS off the air . your own offline maps . no cloud")
-    print("  built by Claude McNally")
+    print("  Claude McNally's PC P25 Receiver & GPS Map Plotter   v%s" % VERSION)
+    print("  P25 location & voice, off the air . your own offline maps . no cloud")
+    print("  an original, built by Claude McNally  -  'the McNally'")
     print("=" * 60)
 
 
