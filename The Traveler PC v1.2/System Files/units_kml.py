@@ -382,6 +382,11 @@ _last_gps_date = None
 _link_state = "unknown"       # "up" / "down" / "unknown"
 _link_seen  = 0.0             # monotonic time of the last LINK status heard
 
+# CURRENT SPEAKER, learned from $PLKT,SPEAKER,<id> (and ,-  to clear) -- the
+# combo platter's join: the talking unit's own id, so the map rings that dot.
+_speaker = {"id": None, "t": 0.0}
+SPEAKER_HOLD_S = 8.0          # drop a stale speaker if no clear/update arrives
+
 class Report:
     __slots__ = ("unit", "lat", "lon", "alt", "sats", "utc")
     def __init__(self, unit, lat, lon, alt, sats, utc):
@@ -422,6 +427,10 @@ class StreamParser:
             elif tag == "PLKT" and len(f) >= 3 and f[1] == "LINK":
                 _link_state = "up" if f[2].split("*")[0] == "UP" else "down"
                 _link_seen = time.monotonic()
+            elif tag == "PLKT" and len(f) >= 3 and f[1] == "SPEAKER":
+                sid = f[2].split("*")[0]
+                _speaker["id"] = None if sid in ("", "-") else sid
+                _speaker["t"] = time.monotonic()
         if last_end:
             del self._buf[:last_end]
         if len(self._buf) > 8192:
@@ -564,8 +573,13 @@ def _units_payload():
                     "age_s": int(age), "age": _age(age), "stale": age > STALE_S,
                     "sats": u.get("sats", "")})
     out.sort(key=lambda d: d["name"].lower())
+    sp = None
+    sid = _speaker["id"]
+    if sid and (now - _speaker["t"]) <= SPEAKER_HOLD_S:
+        sp = {"id": sid, "name": al.get(sid, sid)}
     return {"server_time": time.strftime("%H:%M:%S"),
             "alarm": {"down": down, "why": why},
+            "speaker": sp,
             "count": len(out), "units": out}
 
 # A self-contained live map for any phone/tablet browser. No internet, no app, no CDN:

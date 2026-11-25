@@ -53,13 +53,24 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
 #amenu .newid{flex:0 0 108px;min-width:0}
 #amenu .act .alt{background:#17344a;border:1px solid #255277;color:#bfe0ff}
 #menu a.pick{color:#7fd1ff;font-weight:700}
+#listen{pointer-events:auto;cursor:pointer;background:#1f3a52;color:#bfe0ff;border:1px solid #255277;border-radius:7px;
+ padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+#listen.on{background:#1f6b3a;border-color:#3fae63;color:#eafff0}
+#speaker{position:fixed;z-index:646;left:50%;transform:translateX(-50%);top:calc(54px + env(safe-area-inset-top,0px));
+ display:none;align-items:center;gap:11px;background:rgba(18,30,40,.95);border:1px solid #2b6b4a;border-radius:22px;
+ padding:7px 15px;color:#eafff0;font-weight:700;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+#speaker.on{display:flex}
+#spkname{color:#5fe39a;white-space:nowrap}
+#vu{width:72px;height:9px;background:#0b141c;border:1px solid #1e3a2b;border-radius:6px;overflow:hidden}
+#vu>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c);transition:width .08s linear}
 </style></head><body>
 <div id="map"></div>
 <div id="bar"><span id="title">THE TRAVELER PC</span><span id="mapname"></span>
-<span id="status"><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
+<span id="status"><button id="listen">&#128266; Listen</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
 <div id="menu"></div>
 <div id="amenu"></div>
 <div id="banner"></div>
+<div id="speaker"><span id="spkname"></span><span id="vu"><i></i></span></div>
 <div id="splash">
 <svg width="152" height="138" viewBox="0 0 152 138" aria-label="The Traveler PC — fire-lookout tower over a sunset ridge">
  <circle cx="76" cy="60" r="34" fill="#f2a63b" opacity=".18"/><circle cx="76" cy="64" r="21" fill="#f2a63b" opacity=".42"/>
@@ -162,19 +173,64 @@ function update(d){
   var ban=document.getElementById("banner");
   if(d.alarm&&d.alarm.down){ban.style.display="block";ban.textContent="⚠ RADIO LINK DOWN — "+d.alarm.why;}
   else ban.style.display="none";
-  var seen={}, pts=[];
+  // CURRENT SPEAKER: the combo platter's join -- the talking unit lit by its id.
+  var sp=d.speaker, spel=document.getElementById("speaker");
+  if(sp){ spel.classList.add("on"); document.getElementById("spkname").textContent="🔊 "+sp.name+" speaking"; }
+  else spel.classList.remove("on");
+  var seen={};
   d.units.forEach(function(u){
-    seen[u.id]=1; var ll=[u.lat,u.lon], self=(u.id===SELF_ID);
-    var col=self?SELF:(u.stale?AMBER:GREEN);
-    var lab=self?("MY POSITION · "+u.age):(u.name+" · "+u.age+(u.stale?" (stale)":""));
-    pts.push(ll);
-    if(markers[u.id]){ markers[u.id].setLatLng(ll).setStyle({color:col,fillColor:col}); markers[u.id].setTooltipContent(lab); }
-    else { var m=L.circleMarker(ll,{radius:self?9:7,color:col,fillColor:col,fillOpacity:1,weight:self?3:2}).addTo(map);
+    seen[u.id]=1; var ll=[u.lat,u.lon], self=(u.id===SELF_ID), talking=sp&&(u.id===sp.id);
+    var col=self?SELF:(u.stale?AMBER:GREEN), rad=(self?9:7)+(talking?4:0);
+    var lab=(talking?"🔊 ":"")+(self?("MY POSITION · "+u.age):(u.name+" · "+u.age+(u.stale?" (stale)":"")));
+    if(markers[u.id]){ markers[u.id].setLatLng(ll).setRadius(rad)
+        .setStyle({color:talking?"#eafff0":col,fillColor:col,weight:talking?5:(self?3:2)}); markers[u.id].setTooltipContent(lab); }
+    else { var m=L.circleMarker(ll,{radius:rad,color:talking?"#eafff0":col,fillColor:col,fillOpacity:1,weight:talking?5:(self?3:2)}).addTo(map);
            m.bindTooltip(lab,{permanent:true,direction:"right",className:"ulbl",offset:[8,0]}); markers[u.id]=m; }
   });
   Object.keys(markers).forEach(function(id){ if(!seen[id]){ map.removeLayer(markers[id]); delete markers[id]; }});
   // (No auto-pan to units: they key up from everywhere and must never move the display.)
 }
+
+// ---- Listen: play the decoded voice stream (WebSocket PCM -> Web Audio) ----
+// The combo platter's audio: the Traveler PC decodes voice to 8 kHz PCM and
+// streams it on ws://<host>:8081; one tap on Listen plays it here. Browsers
+// block autoplay until a click, so the voice starts on that tap. Auto-reconnects.
+var AC=null, vws=null, vuLevel=0, wantAudio=false;
+function openVoice(){
+  if(vws) return;
+  try{ vws=new WebSocket("ws://"+location.hostname+":8081"); }catch(e){ return; }
+  vws.binaryType="arraybuffer";
+  var playAt=0;
+  vws.onopen=function(){ playAt=AC.currentTime+0.15; };
+  vws.onmessage=function(ev){
+    var i16=new Int16Array(ev.data); if(!i16.length) return;
+    var buf=AC.createBuffer(1,i16.length,8000), ch=buf.getChannelData(0), s=0;
+    for(var i=0;i<i16.length;i++){ var v=i16[i]/32768; ch[i]=v; s+=v*v; }
+    vuLevel=Math.max(vuLevel,Math.sqrt(s/i16.length));       // VU rides the audio we play
+    var src=AC.createBufferSource(); src.buffer=buf; src.connect(AC.destination);
+    var now=AC.currentTime; if(playAt<now) playAt=now+0.05;
+    src.start(playAt); playAt+=buf.duration;
+  };
+  vws.onclose=function(){ vws=null; if(wantAudio) setTimeout(openVoice,1000); };   // auto-reconnect
+  vws.onerror=function(){ try{vws.close();}catch(e){} };
+}
+document.getElementById("listen").onclick=function(e){
+  e.stopPropagation();
+  var btn=this;
+  if(!wantAudio){
+    wantAudio=true;
+    if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(err){ wantAudio=false; return; } }
+    if(AC.state==="suspended") AC.resume();
+    openVoice(); btn.classList.add("on"); btn.innerHTML="&#128266; Listening";
+  } else {
+    wantAudio=false; if(vws){ try{vws.close();}catch(e){} } vws=null;
+    btn.classList.remove("on"); btn.innerHTML="&#128266; Listen";
+  }
+};
+setInterval(function(){                                       // VU meter decay/display
+  vuLevel*=0.6; var w=Math.min(100,Math.round(vuLevel*280));
+  var bar=document.querySelector("#vu>i"); if(bar) bar.style.width=w+"%";
+},90);
 loadMaps();                    // resolves which map to show, then kicks pollMeta() for its tiles
 tick(); setInterval(tick,3000);
 setInterval(loadMaps,30000);   // pick up newly-added maps without a reload

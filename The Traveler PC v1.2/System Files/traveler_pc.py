@@ -41,9 +41,11 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from live_core import LiveDecoder
+from combo_core import ComboDecoder      # GPS + CURRENT SPEAKER + voice, one stream
+import imbe_decode                       # pure-Python IMBE voice -> PCM (no binary)
+from voice_ws import VoiceWS             # stream decoded PCM to the map's Listen button
 
-VERSION = "1.2"                   # The Traveler PC
+VERSION = "1.3"                   # The Traveler PC -- combo platter (GPS + voice)
 RATE = 48000                      # ask the card for 48 kHz mono (integer 10 sps)
 BLOCK = 2048                      # callback block size
 DEV_HINTS = ("blaster", "sb play", "usb audio", "usb-audio", "usb pnp", "line (")
@@ -178,7 +180,43 @@ def _make_logger():
     return lf, logpath
 
 
-def run_live(server):
+def _make_combo(rate, server, vws, on_report, on_status):
+    """Build a ComboDecoder wired to the three product outputs:
+      GPS report  -> on_report (serves :10110 / logs, caller's callback)
+      speaker     -> $PLKT,SPEAKER,<id> on :10110 so the map rings the talker
+      voice       -> pure-Python IMBE decode -> PCM -> the browser Listen stream
+    One ImbeDecoder per transmission (a key-up is one independent talk)."""
+    def on_speaker(uid, t):
+        if server:
+            server.broadcast(_nmea_mk("PLKT,SPEAKER,%s" % uid))
+        on_status("CURRENT SPEAKER: unit %s" % uid)
+
+    def on_voice(frames, spk, t):
+        if not frames:
+            return
+        try:
+            pcm = imbe_decode.decode_frames(frames, uvquality=3, seed=1)  # int16 @ 8 kHz
+        except Exception as e:
+            on_status("voice decode error: %s" % e); return
+        if vws is not None:
+            # push in ~100 ms chunks so a listener that joins mid-talk catches up smoothly
+            b = pcm.astype("<i2").tobytes()
+            step = 800 * 2
+            for o in range(0, len(b), step):
+                vws.push(b[o:o + step])
+        dur = len(frames) * 0.02
+        if server:
+            # clear the talker shortly after the audio finishes so the ring fades with the voice
+            def _clear():
+                server.broadcast(_nmea_mk("PLKT,SPEAKER,-"))
+            threading.Timer(dur + 0.4, _clear).start()
+        on_status("voice: %d frames (%.1fs) -> stream" % (len(frames), dur))
+
+    return ComboDecoder(rate, on_report=on_report, on_speaker=on_speaker,
+                        on_voice=on_voice, on_status=on_status)
+
+
+def run_live(server, vws=None):
     try:
         import sounddevice as sd
     except Exception as e:
@@ -214,7 +252,7 @@ def run_live(server):
             server.broadcast(gga)
             if pp: server.broadcast(pp)
 
-    dec = LiveDecoder(rate, on_report, lambda m: print("   .. %s" % m))
+    dec = _make_combo(rate, server, vws, on_report, lambda m: print("   .. %s" % m))
     q = queue.Queue()
     def cb(indata, frames, tinfo, status):
         q.put(indata[:, 0].copy())
@@ -247,7 +285,7 @@ def run_live(server):
               % (state["n"], "" if state["n"] == 1 else "s", os.path.abspath(logpath)))
 
 
-def run_replay(wavpath, server):
+def run_replay(wavpath, server, vws=None):
     import wave
     w = wave.open(wavpath, "rb"); rate = w.getframerate(); nch = w.getnchannels()
     x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32768.0
@@ -265,7 +303,7 @@ def run_replay(wavpath, server):
         if server:
             server.broadcast(gga)
             if pp: server.broadcast(pp)
-    dec = LiveDecoder(rate, on_report, lambda m: None)
+    dec = _make_combo(rate, server, vws, on_report, lambda m: print("   .. %s" % m))
     print("The Traveler PC (OTA decode) v%s  --  REPLAY mode" % VERSION)
     print("file: %s  (%d Hz, %.1fs)\n" % (os.path.basename(wavpath), rate, len(x) / rate))
     if server: time.sleep(2.0)          # let a viewer connect before we broadcast
@@ -317,9 +355,10 @@ def main():
         i = args.index("--serve")
         if i + 1 < len(args) and args[i + 1].isdigit():
             port = int(args[i + 1])
-    server = None
+    server = None; vws = None
     if serve:
         server = NmeaServer(port); server.start()
+        vws = VoiceWS().start()          # decoded voice -> the map's Listen button
         if "--self-gps" in args:
             threading.Thread(target=_self_gps_loop, args=(server,), daemon=True).start()
     # replay if a wav was given (--replay <wav> or a bare .wav arg)
@@ -330,8 +369,8 @@ def main():
     if wav:
         if not os.path.isfile(wav):
             print("File not found: %s" % wav); sys.exit(1)
-        return run_replay(wav, server)
-    return run_live(server)
+        return run_replay(wav, server, vws)
+    return run_live(server, vws)
 
 
 if __name__ == "__main__":
