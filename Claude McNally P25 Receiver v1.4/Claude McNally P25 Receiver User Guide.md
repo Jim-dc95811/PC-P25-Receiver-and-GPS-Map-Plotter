@@ -41,6 +41,7 @@ The first launch does a one-time setup (it installs three small helpers and show
 - **Each unit is plotted by its ID**, the dot matching the radio. **Green** = live, **amber** = stale.
 - **MY POSITION** is the teal dot — your own Garmin fix.
 - **Maps** (top right) lists your maps and switches between them; **Pick a map (.tpkx)…** opens any map file on this PC.
+- **📱 Phone** (top right) shows a QR code. Scan it with any phone's camera on the same Wi-Fi and the map opens on the phone — no app, no typing. (The code carries this PC's network address, so it works from a phone even though typing the PC's name wouldn't.)
 - **Alias** (top right) lets you give a raw unit ID a crew name (e.g. `9076802` → *Jax 24*). Edit a name beside any ID, or type **any unit ID** in the bottom row to name a radio **before it ever transmits** (not just the ones on screen). Click **Save names**; it shows on the map within a few seconds. Names stick even when that radio isn't transmitting right now.
 - A unit that goes quiet turns amber so you can read the fleet at a glance.
 
