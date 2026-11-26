@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Claude McNally's P25 Receiver v2.0</title>
+<title>Claude McNally's P25 Receiver v2.1</title>
 <link rel="stylesheet" href="/leaflet.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -61,8 +61,7 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
  padding:7px 15px;color:#eafff0;font-weight:700;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
 #speaker.on{display:flex}
 #spkname{color:#5fe39a;white-space:nowrap}
-#vu{width:72px;height:9px;background:#0b141c;border:1px solid #1e3a2b;border-radius:6px;overflow:hidden}
-#vu>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c);transition:width .08s linear}
+#spkrb{color:#9fd8c0;white-space:nowrap;font-weight:600}
 #phonebox{position:fixed;z-index:650;top:calc(44px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));
   display:none;background:#0d1a24;border:1px solid #23384f;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);min-width:210px;max-width:84vw;padding-bottom:12px}
 #phonebox h4{font-size:12px;letter-spacing:.6px;color:#7f98ad;font-weight:700;padding:11px 14px 6px;text-transform:uppercase}
@@ -72,13 +71,13 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
 #phonebox .phint{color:#9fb3c8;font-size:12px;line-height:1.4;padding:4px 14px 2px;text-align:center}
 </style></head><body>
 <div id="map"></div>
-<div id="bar"><span id="title">McNALLY P25 &middot; v2.0</span><span id="mapname"></span>
+<div id="bar"><span id="title">McNALLY P25 &middot; v2.1</span><span id="mapname"></span>
 <span id="status"><button id="listen">&#128266; Listen</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><button id="phone">&#128241; Phone</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
 <div id="menu"></div>
 <div id="amenu"></div>
 <div id="phonebox"></div>
 <div id="banner"></div>
-<div id="speaker"><span id="spkname"></span><span id="vu"><i></i></span></div>
+<div id="speaker"><span id="spkname"></span><span id="spkrb"></span></div>
 <div id="splash">
 <svg width="152" height="138" viewBox="0 0 152 138" aria-label="Claude McNally's P25 Receiver — fire-lookout tower over a sunset ridge">
  <circle cx="76" cy="60" r="34" fill="#f2a63b" opacity=".18"/><circle cx="76" cy="64" r="21" fill="#f2a63b" opacity=".42"/>
@@ -174,6 +173,24 @@ function tick(){
   .catch(function(){ document.getElementById("dot").className="bad";
     document.getElementById("clock").textContent="reconnecting"; });
 }
+// Range + true-north bearing from a (MY POSITION) to b (the talking unit).
+// Returns "" unless BOTH ends have a valid fix -- same as the BK: no heading to
+// a radio that hasn't reported GPS, and none without our own position. Great-
+// circle (haversine) range in miles; initial bearing in true degrees, 3-digit.
+function relRangeBrg(a,b){
+  if(!a||!b) return "";
+  var la=+a.lat, oa=+a.lon, lb=+b.lat, ob=+b.lon;
+  if(!isFinite(la)||!isFinite(oa)||!isFinite(lb)||!isFinite(ob)) return "";
+  var R=3958.8, d2r=Math.PI/180;
+  var p1=la*d2r, p2=lb*d2r, dp=(lb-la)*d2r, dl=(ob-oa)*d2r;
+  var h=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+  var mi=2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  var y=Math.sin(dl)*Math.cos(p2), x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  var bd=(Math.round(Math.atan2(y,x)/d2r)+360)%360;
+  var bs=""+bd; while(bs.length<3) bs="0"+bs;
+  var ds=mi<10?mi.toFixed(1):(""+Math.round(mi));
+  return " · "+ds+" mi · "+bs+"°";
+}
 function update(d){
   document.getElementById("dot").className="";
   document.getElementById("clock").textContent=d.server_time;
@@ -181,10 +198,15 @@ function update(d){
   var ban=document.getElementById("banner");
   if(d.alarm&&d.alarm.down){ban.style.display="block";ban.textContent="⚠ RADIO LINK DOWN — "+d.alarm.why;}
   else ban.style.display="none";
-  // CURRENT SPEAKER: the combo platter's join -- the talking unit lit by its id.
+  // CURRENT SPEAKER: the combo platter's join -- the talking unit lit by its id,
+  // with range + true-north bearing from MY POSITION (both ends need a fix).
   var sp=d.speaker, spel=document.getElementById("speaker");
-  if(sp){ spel.classList.add("on"); document.getElementById("spkname").textContent="🔊 "+sp.name+" speaking"; }
-  else spel.classList.remove("on");
+  if(sp){ spel.classList.add("on");
+    document.getElementById("spkname").textContent="🔊 "+sp.name+" speaking";
+    var me=null,them=null;
+    d.units.forEach(function(u){ if(u.id===SELF_ID)me=u; if(u.id===sp.id)them=u; });
+    document.getElementById("spkrb").textContent=relRangeBrg(me,them);
+  } else spel.classList.remove("on");
   var seen={};
   d.units.forEach(function(u){
     seen[u.id]=1; var ll=[u.lat,u.lon], self=(u.id===SELF_ID), talking=sp&&(u.id===sp.id);
@@ -203,7 +225,7 @@ function update(d){
 // The combo platter's audio: the Traveler PC decodes voice to 8 kHz PCM and
 // streams it on ws://<host>:8081; one tap on Listen plays it here. Browsers
 // block autoplay until a click, so the voice starts on that tap. Auto-reconnects.
-var AC=null, vws=null, vuLevel=0, wantAudio=false;
+var AC=null, vws=null, wantAudio=false;
 function openVoice(){
   if(vws) return;
   try{ vws=new WebSocket("ws://"+location.hostname+":8081"); }catch(e){ return; }
@@ -212,9 +234,8 @@ function openVoice(){
   vws.onopen=function(){ playAt=AC.currentTime+0.15; };
   vws.onmessage=function(ev){
     var i16=new Int16Array(ev.data); if(!i16.length) return;
-    var buf=AC.createBuffer(1,i16.length,8000), ch=buf.getChannelData(0), s=0;
-    for(var i=0;i<i16.length;i++){ var v=i16[i]/32768; ch[i]=v; s+=v*v; }
-    vuLevel=Math.max(vuLevel,Math.sqrt(s/i16.length));       // VU rides the audio we play
+    var buf=AC.createBuffer(1,i16.length,8000), ch=buf.getChannelData(0);
+    for(var i=0;i<i16.length;i++){ ch[i]=i16[i]/32768; }
     var src=AC.createBufferSource(); src.buffer=buf; src.connect(AC.destination);
     var now=AC.currentTime; if(playAt<now) playAt=now+0.05;
     src.start(playAt); playAt+=buf.duration;
@@ -235,10 +256,6 @@ document.getElementById("listen").onclick=function(e){
     btn.classList.remove("on"); btn.innerHTML="&#128266; Listen";
   }
 };
-setInterval(function(){                                       // VU meter decay/display
-  vuLevel*=0.6; var w=Math.min(100,Math.round(vuLevel*280));
-  var bar=document.querySelector("#vu>i"); if(bar) bar.style.width=w+"%";
-},90);
 loadMaps();                    // resolves which map to show, then kicks pollMeta() for its tiles
 tick(); setInterval(tick,3000);
 setInterval(loadMaps,30000);   // pick up newly-added maps without a reload
