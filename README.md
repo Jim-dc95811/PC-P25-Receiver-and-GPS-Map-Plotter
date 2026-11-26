@@ -4,7 +4,7 @@
 
 ### 🌐 **[See the public project page →](https://jim-dc95811.github.io/PC-P25-Receiver-and-GPS-Map-Plotter/)**
 
-🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/1C8JDyni4oxTrLua_p_7PLHfL5h9ODYCe/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
+🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/11efFk57kvCwqVL0mRimXjpjt_NQtNcGn/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
 
 Every P25 radio already transmits its own position in a standardized, open format, and its voice right alongside it. This receiver pulls **both straight out of the air** — nothing but a radio, a USB sound card, and this program — and puts the whole fleet on **your own offline map**: every unit by its radio ID, your own position beside them, and, the moment someone keys up, **who is talking with their voice playing right in the browser**.
 
