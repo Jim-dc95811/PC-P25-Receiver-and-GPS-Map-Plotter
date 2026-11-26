@@ -6,6 +6,9 @@
 
 🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/1kFhra5zKXQeyN3yqg07gDuO3XLrV0cga/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
 
+![The whole rig — a BK KNG-M150 handing its discriminator audio to a USB sound card, a laptop running the receiver with the live fleet map, and a USB GPS puck for your own position](images/bk_rig_live.png)
+*The entire setup: a radio's detector audio into a USB sound card, a plain laptop running the receiver, a USB GPS for your own dot — the fleet's positions and voice straight off the air, on your own offline map.*
+
 Every P25 radio already transmits its own position in a standardized, open format, and its voice right alongside it. This receiver pulls **both straight out of the air** — nothing but a radio, a USB sound card, and this program — and puts the whole fleet on **your own offline map**: every unit by its radio ID, your own position beside them, and, the moment someone keys up, **who is talking with their voice playing right in the browser**.
 
 No SDR. No base station. No internet, no cell, no cloud. No special dongle, no patent-encumbered part. One folder, one double-click.
