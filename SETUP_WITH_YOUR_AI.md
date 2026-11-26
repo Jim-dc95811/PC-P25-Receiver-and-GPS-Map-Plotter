@@ -32,7 +32,7 @@ Walk the checklist with them:
 
 Download the receiver — **prefer the Google Drive copy** (it won't trip a browser/Defender download warning the way a fresh GitHub zip can):
 
-- **Drive (preferred):** <https://drive.google.com/drive/folders/1YksApYLX_a8ZOlpwrNfGQcnOdYGCMxyj>
+- **Drive (preferred):** <https://drive.google.com/drive/folders/1DDOvFRsdyi3SYFeYVto0o23hwNOcPVG9>
 - **GitHub:** <https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter>
 
 **Extract All** first (don't run from inside the zip). Inside there's **one** thing to double-click — `Start Claude McNally P25 Receiver.bat` — and a `System Files` folder holding everything else. The first launch installs three small Python helpers (`numpy`, `scipy`, `sounddevice`) automatically; the PC needs the internet that one time, then it runs fully offline.
@@ -91,7 +91,7 @@ Press **▶ Listen** at the top of the map — the browser plays decoded fleet v
 | | |
 |---|---|
 | Receiver (GitHub) | <https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter> |
-| Receiver download (Drive, preferred) | <https://drive.google.com/drive/folders/1YksApYLX_a8ZOlpwrNfGQcnOdYGCMxyj> |
+| Receiver download (Drive, preferred) | <https://drive.google.com/drive/folders/1DDOvFRsdyi3SYFeYVto0o23hwNOcPVG9> |
 | TPKX sample maps (Drive) | <https://drive.google.com/drive/folders/11PrBsj0spza2O6uPCRh3whwE5AC7qJDw> |
 | Make your own maps — ArcGIS Earth Unlocked | <https://github.com/Jim-dc95811/ArcGIS-Earth-Unlocked> |
 | Master Technical Reference (Drive) | <https://drive.google.com/file/d/1ti8PrJOqAL_1Uf1vo2SAfIl8FFc20zIT/view> |

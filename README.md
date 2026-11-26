@@ -10,7 +10,7 @@ Every P25 radio already transmits its own position in a standardized, open forma
 
 No SDR. No base station. No internet, no cell, no cloud. No special dongle, no patent-encumbered part. One folder, one double-click.
 
-- **⬇️ Download (Google Drive):** [Claude McNally P25 Receiver v2.1](https://drive.google.com/drive/folders/1YksApYLX_a8ZOlpwrNfGQcnOdYGCMxyj) — the ready-to-run folder (loose files, no browser security warning). *(The zip is also in this repo if you prefer: [`Claude_McNally_P25_Receiver_v2.1.zip`](Claude_McNally_P25_Receiver_v2.1.zip).)*
+- **⬇️ Download (Google Drive):** [Claude McNally P25 Receiver v2.1](https://drive.google.com/drive/folders/1DDOvFRsdyi3SYFeYVto0o23hwNOcPVG9) — the ready-to-run folder (loose files, no browser security warning). *(The zip is also in this repo if you prefer: [`Claude_McNally_P25_Receiver_v2.1.zip`](Claude_McNally_P25_Receiver_v2.1.zip).)*
 - **📖 User guide:** [`Claude McNally P25 Receiver v2.1/Claude McNally P25 Receiver User Guide.pdf`](Claude%20McNally%20P25%20Receiver%20v2.1/Claude%20McNally%20P25%20Receiver%20User%20Guide.pdf)
 
 ![The live receiver in action — Listening active, the current speaker (Jax 25) named and ringed on the map, three units on Z20 offline imagery](images/live_z20.jpg)
