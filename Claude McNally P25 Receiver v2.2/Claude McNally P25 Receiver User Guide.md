@@ -44,6 +44,7 @@ The first launch does a one-time setup (it installs three small helpers and show
 - **📱 Phone** (top right) shows a QR code. Scan it with any phone's camera on the same Wi-Fi and the map opens on the phone — no app, no typing. (The code carries this PC's network address, so it works from a phone even though typing the PC's name wouldn't.)
 - **Alias** (top right) lets you give a raw unit ID a crew name (e.g. `9076802` → *Jax 24*). Edit a name beside any ID, or type **any unit ID** in the bottom row to name a radio **before it ever transmits** (not just the ones on screen). Click **Save names**; it shows on the map within a few seconds. Names stick even when that radio isn't transmitting right now.
 - A unit that goes quiet turns amber so you can read the fleet at a glance.
+- **NAC** — the system's Network Access Code shows in the top bar in **hex** (e.g. `NAC 0x455`) the moment the receiver hears a voice call, and stays put. It confirms you're locked to the right P25 system.
 
 ---
 
@@ -52,8 +53,7 @@ The first launch does a one-time setup (it installs three small helpers and show
 The same detector audio that carries the GPS also carries the voice, so the receiver decodes **both** — and plays the voice right in the browser, nothing extra to install.
 
 - **Press ▶ Listen once** (top of the map). The browser starts playing decoded fleet voice. Leave it on; it reconnects on its own if the link blips.
-- **CURRENT SPEAKER** — when a unit keys up, its panel shows **who is talking**, matched to the unit by the radio's own ID. **That unit's marker lights with a white ring on the map**, so you *see* who's on the air while you hear them.
-- **The VU meter** rides the live audio level so you can tell at a glance when there's traffic.
+- **CURRENT SPEAKER** — when a unit keys up, its panel shows **who is talking**, matched to the unit by the radio's own ID. **That unit's marker lights with a white ring on the map**, so you *see* who's on the air while you hear them. The panel also shows the **talkgroup** (`TG`, in decimal) and — when both you and the talker have a GPS fix — the **range and true-north bearing** to them (e.g. `· 1.2 mi · 130°`), so you get distance-and-direction to whoever is on the air. (A radio has to rotate through those readouts on its little screen; here they're all in one glance.)
 - **It plays the key-up clean, start to finish.** The receiver captures the whole transmission, then plays it — so you hear every word from the first syllable, no clipped front end. On a long transmission that playback runs a little behind real time; on back-and-forth traffic it stays seamless, and a listener at a distance can't tell. (A quiet side-benefit: no squelch tail, no stepped-on first word.)
 
 Voice and the map are kept apart on purpose: if the audio ever drops, the map and the GPS feed keep running untouched.
