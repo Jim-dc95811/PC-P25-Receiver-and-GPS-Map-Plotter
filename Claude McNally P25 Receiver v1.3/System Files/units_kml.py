@@ -61,13 +61,23 @@ import os, sqlite3, struct, zipfile
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "1.12"
+VERSION = "1.13"
 
 # ---- where we read from / serve to ----
 BRIDGE_HOST = "127.0.0.1"     # the bridge's NMEA feed (same box)
 BRIDGE_PORT = 10110
 SERVE_HOST  = "0.0.0.0"       # serve units.kml to the whole LAN
 SERVE_PORT  = 8080
+
+try:
+    import qr_svg                      # the "scan to open on your phone" QR (sealed pure-Python encoder)
+except Exception:
+    qr_svg = None
+
+def _phone_url():
+    # the URL a phone can actually reach: this box's LAN IP (NOT a Windows name a phone can't resolve)
+    ip = qr_svg.lan_ip() if qr_svg else SERVE_HOST
+    return "http://%s:%d/" % (ip, SERVE_PORT)
 STALE_S     = 90             # a unit with no update this long is labelled "stale"
 EXPIRE_S    = 7200           # ...and dropped from the map after this long (0 = never)
 RECONNECT_S = 4
@@ -620,6 +630,19 @@ class _H(BaseHTTPRequestHandler):
             return _serve_asset(self, "map.html")
         if path in ("/leaflet.js", "/leaflet.css"):
             return _serve_asset(self, path.lstrip("/"))
+        if path == "/phone":
+            return self._json(200, {"url": _phone_url()})
+        if path == "/qr.svg":
+            if qr_svg is None:
+                self.send_error(404); return
+            body = qr_svg.qr_svg(_phone_url()).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/maps.json":
             return self._json(200, {"maps": _maps_list()})
         if path.startswith("/m/"):

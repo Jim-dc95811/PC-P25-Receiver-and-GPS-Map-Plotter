@@ -63,12 +63,20 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
 #spkname{color:#5fe39a;white-space:nowrap}
 #vu{width:72px;height:9px;background:#0b141c;border:1px solid #1e3a2b;border-radius:6px;overflow:hidden}
 #vu>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c);transition:width .08s linear}
+#phonebox{position:fixed;z-index:650;top:calc(44px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));
+  display:none;background:#0d1a24;border:1px solid #23384f;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);min-width:210px;max-width:84vw;padding-bottom:12px}
+#phonebox h4{font-size:12px;letter-spacing:.6px;color:#7f98ad;font-weight:700;padding:11px 14px 6px;text-transform:uppercase}
+#phonebox .qrwrap{background:#fff;border-radius:8px;margin:0 14px;padding:8px;display:flex;justify-content:center}
+#phonebox .qrwrap img{width:180px;height:180px;image-rendering:pixelated;display:block}
+#phonebox .purl{font-family:ui-monospace,Consolas,monospace;font-size:13px;color:#7fd1ff;text-align:center;padding:9px 12px 2px;word-break:break-all}
+#phonebox .phint{color:#9fb3c8;font-size:12px;line-height:1.4;padding:4px 14px 2px;text-align:center}
 </style></head><body>
 <div id="map"></div>
 <div id="bar"><span id="title">McNALLY P25</span><span id="mapname"></span>
-<span id="status"><button id="listen">&#128266; Listen</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
+<span id="status"><button id="listen">&#128266; Listen</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><button id="phone">&#128241; Phone</button><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
 <div id="menu"></div>
 <div id="amenu"></div>
+<div id="phonebox"></div>
 <div id="banner"></div>
 <div id="speaker"><span id="spkname"></span><span id="vu"><i></i></span></div>
 <div id="splash">
@@ -287,6 +295,29 @@ document.getElementById("alias").onclick=function(e){
 document.getElementById("amenu").addEventListener("click",function(e){ e.stopPropagation(); });   // clicks inside stay open
 document.addEventListener("click",function(){ document.getElementById("amenu").style.display="none"; });
 document.getElementById("maps").addEventListener("click",function(){ document.getElementById("amenu").style.display="none"; });
+
+// ---- Phone: show a QR of this box's LAN address so a phone can scan and open the map ----
+document.getElementById("phone").onclick=function(e){
+  e.stopPropagation();
+  document.getElementById("menu").style.display="none";
+  document.getElementById("amenu").style.display="none";
+  var p=document.getElementById("phonebox");
+  if(p.style.display==="block"){ p.style.display="none"; return; }
+  p.innerHTML='<h4>Open on your phone</h4>'+
+    '<div class="qrwrap"><img id="qrimg" alt="QR to open this map"></div>'+
+    '<div class="purl" id="purl">&hellip;</div>'+
+    '<div class="phint">Scan with your phone&rsquo;s camera. Same Wi-Fi, no app, no typing.</div>';
+  document.getElementById("qrimg").src="/qr.svg?t="+Date.now();   // server fills in its own LAN IP each time
+  fetch("/phone",{cache:"no-store"}).then(function(r){return r.json();})
+    .then(function(d){ var u=document.getElementById("purl"); if(u&&d&&d.url) u.textContent=d.url; })
+    .catch(function(){});
+  p.style.display="block";
+};
+document.getElementById("phonebox").addEventListener("click",function(e){ e.stopPropagation(); });
+document.addEventListener("click",function(){ document.getElementById("phonebox").style.display="none"; });
+document.getElementById("listen").addEventListener("click",function(){ document.getElementById("phonebox").style.display="none"; });
+document.getElementById("alias").addEventListener("click",function(){ document.getElementById("phonebox").style.display="none"; });
+document.getElementById("maps").addEventListener("click",function(){ document.getElementById("phonebox").style.display="none"; });
 
 // ---- Claude McNally startup badge: the maker's nameplate on screen start, then it clears to the map ----
 (function(){
