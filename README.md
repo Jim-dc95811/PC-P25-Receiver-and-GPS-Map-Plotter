@@ -2,7 +2,7 @@
 
 **Hear your P25 fleet and see where every unit is — off the air, on a plain PC. Free, offline, receive-only.**
 
-🤖 **Using AI assistance?** Have the agent read the [CLAUDE.md](CLAUDE.md) file first.
+🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](SETUP_WITH_YOUR_AI.md)**. It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
 
 Every P25 radio already transmits its own position in a standardized, open format, and its voice right alongside it. This receiver pulls **both straight out of the air** — nothing but a radio, a USB sound card, and this program — and puts the whole fleet on **your own offline map**: every unit by its radio ID, your own position beside them, and, the moment someone keys up, **who is talking with their voice playing right in the browser**.
 
