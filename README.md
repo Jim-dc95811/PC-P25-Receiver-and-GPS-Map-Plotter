@@ -21,6 +21,14 @@ No SDR. No base station. No internet, no cell, no cloud. No special dongle, no p
 
 ---
 
+## The whole system in one picture
+
+One program at the center, pulling from the radio, sound card and GPS — and spraying a live map and voice to every device on the Wi‑Fi at once. Not a line you follow end to end; a living hub.
+
+![System diagram: the radio feeds a USB sound card and a GPS feeds the PC; one program (the decoder, the map server on :8080 and the audio server on :8081) turns them into a live map and voice that stream over Wi‑Fi to phone, tablet and laptop simultaneously](images/system_diagram.png)
+
+---
+
 ## What you plug in
 
 - **USB sound card → the radio's detector / discriminator audio** — the flat *detected* audio (e.g. a Kenwood NX-700 **DEO pin 19**, radio set **WIDE**), not the speaker/voice audio. This single feed carries **both** the GPS positions and the voice. A Sound Blaster Play! 3 is proven.
