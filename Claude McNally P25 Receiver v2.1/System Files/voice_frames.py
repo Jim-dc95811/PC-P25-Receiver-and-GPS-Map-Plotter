@@ -14,8 +14,9 @@ Proven engine (P25-GPS-Decode decode/voice_ldu.py + decode/lc_source.py):
   - DSD-style sequential dibit Reader (status symbol every 36 dibits).
   - Annex-H deinterleave (TIA-102.BABA iW/iX/iY/iZ) -> imbe_fr.
   - LDU1 Link Control: the three 20-dibit gaps before IMBE 3/4/5 are the 12
-    DATA hex words 11..0 (DSD p25p1_ldu1.c); group-voice LC (LCO 0) -> source =
-    lcinfo bits 32..56 (p25_lcw.c).
+    DATA hex words 11..0 (DSD p25p1_ldu1.c); group-voice LC (LCO 0) -> talkgroup
+    = lcinfo bits 16..32 and source = bits 32..56 (p25_lcw.c). The NAC rides in
+    every frame's NID (framer), system-constant.
 
 Read-only; reuses the bundle's framer + frontend. No vocoder here -- this
 produces imbe_fr frames + the speaker id; the shell vocodes and displays.
@@ -106,8 +107,13 @@ def _read_hexword(rd):
     return bits
 
 
-def lcw_source(dibits, start):
-    """Group-voice (LCO 0) source unit ID from one LDU1, or None."""
+def lcw_group(dibits, start):
+    """Group-voice (LCO 0) (talkgroup_id, source_unit_id) from one LDU1.
+
+    The 56-bit LC info of a Group Voice Channel User word (TIA-102) lays out as
+    service-options[8] reserved[8] group-address[16] source-address[24], so the
+    talkgroup is bits 16..32 and the source is bits 32..56 (the proven speaker
+    field). Returns (None, None) if the word is not group-voice."""
     rd = _Reader(dibits, start + 57, 21)
     hexd = [None] * 12
     gi = 0
@@ -120,19 +126,23 @@ def lcw_source(dibits, start):
             rd.read()
     lcformat = hexd[11] + hexd[10][:2]
     if "".join(map(str, lcformat)) != "00000000":
-        return None
+        return None, None
     lcinfo = hexd[9][4:6]
     for i in (8, 7, 6, 5, 4, 3, 2, 1, 0):
         lcinfo += hexd[i]
-    return int("".join(map(str, lcinfo[32:56])), 2)
+    tgid = int("".join(map(str, lcinfo[16:32])), 2)   # group address (16-bit, decimal)
+    src  = int("".join(map(str, lcinfo[32:56])), 2)   # source unit id (24-bit)
+    return tgid, src
 
 
 def decode_voice_segment(seg, fr0):
-    """From a keyed segment return (speaker_id|None, [imbe_fr,...], n_ldu).
+    """From a keyed segment return (speaker_id|None, tgid|None, nac|None,
+    [imbe_fr,...], n_ldu).
 
-    speaker_id = per-segment MAJORITY of the group-voice LC source over LDU1s
-    (a speaker does not change mid-transmission; rides over the odd uncorrected
-    LC bit error). imbe frames are every LDU's 9 voice frames, in order.
+    speaker_id and tgid = per-segment MAJORITY of the group-voice LC source and
+    group address over the LDU1s (neither changes mid-transmission, so the vote
+    rides over the odd uncorrected LC bit error). nac = majority of the decoded
+    frame NIDs (system-constant). imbe frames are every LDU's 9 voice frames.
     """
     sym = fixed_demod(np.asarray(seg, dtype=float), fr0)
     best = None
@@ -143,14 +153,16 @@ def decode_voice_segment(seg, fr0):
         if best is None or vc > best[0]: best = (vc, db, fr)
     vc, db, fr = best
     if vc == 0:
-        return None, [], 0
-    voice, srcs, n = [], [], 0
+        return None, None, None, [], 0
+    voice, srcs, tgids, n = [], [], [], 0
     for q in fr:
         if q['duid'] in (5, 10) and q['start'] + 875 < len(db):
             voice.extend(extract_voice(db, q['start'])); n += 1
             if q['duid'] == 5:
-                s = lcw_source(db, q['start'])
-                if s is not None:
-                    srcs.append(s)
-    spk = Counter(srcs).most_common(1)[0][0] if srcs else None
-    return spk, voice, n
+                tg, s = lcw_group(db, q['start'])
+                if s is not None:  srcs.append(s)
+                if tg is not None: tgids.append(tg)
+    spk  = Counter(srcs).most_common(1)[0][0] if srcs else None
+    tgid = Counter(tgids).most_common(1)[0][0] if tgids else None
+    nac  = Counter(q['nac'] for q in fr).most_common(1)[0][0] if fr else None
+    return spk, tgid, nac, voice, n

@@ -402,8 +402,9 @@ _link_seen  = 0.0             # monotonic time of the last LINK status heard
 
 # CURRENT SPEAKER, learned from $PLKT,SPEAKER,<id> (and ,-  to clear) -- the
 # combo platter's join: the talking unit's own id, so the map rings that dot.
-_speaker = {"id": None, "t": 0.0}
-_speaker_lock = threading.Lock()   # _speaker is written by the feed thread, read by HTTP threads
+_speaker = {"id": None, "tgid": None, "t": 0.0}
+_system = {"nac": None}       # system NAC (hex string), learned from $PLKT,NAC -- persists
+_speaker_lock = threading.Lock()   # _speaker/_system written by the feed thread, read by HTTP threads
 SPEAKER_HOLD_S = 8.0          # drop a stale speaker if no clear/update arrives
 
 class Report:
@@ -448,9 +449,16 @@ class StreamParser:
                 _link_seen = time.monotonic()
             elif tag == "PLKT" and len(f) >= 3 and f[1] == "SPEAKER":
                 sid = f[2].split("*")[0]
+                tg = f[3].split("*")[0] if len(f) >= 4 else ""
                 with _speaker_lock:
                     _speaker["id"] = None if sid in ("", "-") else sid
+                    _speaker["tgid"] = tg if tg not in ("", "-") else None
                     _speaker["t"] = time.monotonic()
+            elif tag == "PLKT" and len(f) >= 3 and f[1] == "NAC":
+                nv = f[2].split("*")[0]
+                if nv and nv != "-":
+                    with _speaker_lock:
+                        _system["nac"] = nv
         if last_end:
             del self._buf[:last_end]
         if len(self._buf) > 8192:
@@ -595,12 +603,13 @@ def _units_payload():
     out.sort(key=lambda d: d["name"].lower())
     sp = None
     with _speaker_lock:
-        sid = _speaker["id"]; st = _speaker["t"]
+        sid = _speaker["id"]; st = _speaker["t"]; stg = _speaker["tgid"]; nac = _system["nac"]
     if sid and (now - st) <= SPEAKER_HOLD_S:
         sp = {"id": sid, "name": al.get(sid, sid)}
+        if stg: sp["tgid"] = stg
     return {"server_time": time.strftime("%H:%M:%S"),
             "alarm": {"down": down, "why": why},
-            "speaker": sp,
+            "speaker": sp, "nac": nac,
             "count": len(out), "units": out}
 
 # A self-contained live map for any phone/tablet browser. No internet, no app, no CDN:

@@ -6,7 +6,7 @@ the GPS decoder, but captures a WHOLE keyed transmission (onset -> de-key) and
 routes it:
 
   * a short GPS data burst  -> on_report(gga, pp25, t)          [position layer]
-  * a voice transmission    -> on_speaker(unit_id, t)           [CURRENT SPEAKER]
+  * a voice transmission    -> on_speaker(unit_id, tgid, nac, t) [CURRENT SPEAKER]
                             -> on_voice(imbe_frames, spk, t)    [the heard voice]
 
 The two layers are fused by the unit ID: the voice Link Control source is the
@@ -130,15 +130,16 @@ class ComboDecoder:
                     self.reports += 1
                     self.on_report(gga, pp, t)
                     return
-        # 2) else a voice transmission -> speaker + voice frames
-        spk, voice, n = decode_voice_segment(seg, self.fr0)
+        # 2) else a voice transmission -> speaker (+ talkgroup, NAC) + voice frames
+        spk, tgid, nac, voice, n = decode_voice_segment(seg, self.fr0)
         if n == 0:
             self.on_status('tx %d: no lock (weak)' % self.tx); return
         if spk is not None:
             self.last_spk = spk
-            self.on_speaker(spk, t)
+            self.on_speaker(spk, tgid, nac, t)
         self.on_voice(voice, spk, t)
-        self.on_status('tx %d: voice %d LDU, speaker %s' % (self.tx, n, spk))
+        self.on_status('tx %d: voice %d LDU, speaker %s tg %s nac %s'
+                       % (self.tx, n, spk, tgid, ('%03X' % nac) if nac is not None else '?'))
 
     def flush(self):
         if self.state == 'KEYED':
@@ -156,7 +157,9 @@ def _replay(wavpath):
     w.close()
     if nch > 1: x = x[::nch]
     def rep(gga, pp, t): print("  GPS      %s   %s" % (gga, pp or ""))
-    def spk(uid, t):     print("  SPEAKER  unit %d is talking" % uid)
+    def spk(uid, tgid, nac, t):
+        print("  SPEAKER  unit %d talking (tg %s, nac %s)"
+              % (uid, tgid, ('%03X' % nac) if nac is not None else '?'))
     def voi(frames, s, t): print("           (voice: %d IMBE frames, %.1fs audio)"
                                  % (len(frames), len(frames) * 0.02))
     def sta(m): pass

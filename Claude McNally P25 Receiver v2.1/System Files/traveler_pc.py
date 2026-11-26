@@ -192,13 +192,18 @@ def _make_logger():
 def _make_combo(rate, server, vws, on_report, on_status):
     """Build a ComboDecoder wired to the three product outputs:
       GPS report  -> on_report (serves :10110 / logs, caller's callback)
-      speaker     -> $PLKT,SPEAKER,<id> on :10110 so the map rings the talker
+      speaker     -> $PLKT,SPEAKER,<id>,<tgid> (+ $PLKT,NAC,<hex>) on :10110
+                     so the map rings the talker and shows talkgroup + NAC
       voice       -> pure-Python IMBE decode -> PCM -> the browser Listen stream
     One ImbeDecoder per transmission (a key-up is one independent talk)."""
-    def on_speaker(uid, t):
+    def on_speaker(uid, tgid, nac, t):
         if server:
-            server.broadcast(_nmea_mk("PLKT,SPEAKER,%s" % uid))
-        on_status("CURRENT SPEAKER: unit %s" % uid)
+            if nac is not None:
+                # system NAC (hex) on its own sentence -- persists, independent of the talker
+                server.broadcast(_nmea_mk("PLKT,NAC,%03X" % nac))
+            server.broadcast(_nmea_mk("PLKT,SPEAKER,%s,%s" % (uid, tgid if tgid is not None else "")))
+        on_status("CURRENT SPEAKER: unit %s (tg %s, nac %s)"
+                  % (uid, tgid, ('%03X' % nac) if nac is not None else '?'))
 
     def on_voice(frames, spk, t):
         if not frames:
