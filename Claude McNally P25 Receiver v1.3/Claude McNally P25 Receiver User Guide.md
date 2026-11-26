@@ -59,6 +59,25 @@ Voice and the map are kept apart on purpose: if the audio ever drops, the map an
 
 ---
 
+## Test files — prove a build with no radio
+
+The download folder includes a **`Test Files`** folder: known-good over-the-air captures from the bench — the radio's detector audio, saved as WAVs. They let you (or an AI working on this receiver) **verify a decode with no radio connected** — replay any capture and the receiver produces the same result it would live.
+
+Replay from a command prompt in the receiver folder:
+
+    py -3 "System Files\traveler_pc.py" --replay "Test Files\10_gps_48000.wav"
+
+What's in there (a `README.txt` in the folder describes every file):
+
+- **GPS** — `10_gps_48000.wav` is the clean reference: ten position reports that decode to the exact lat/lon and unit IDs the base reported. Plus a second clean capture and a periodic-update capture.
+- **Voice** — `3_each_testing12341234_27seconds.wav`: "Testing 1234 1234" spoken three times, the capture the voice decoder was proven on.
+- **Combo** — `voice_with_a_couple_of_gps_updates.wav`: voice and GPS from the same unit, so the current-speaker ID matches the plotted dot.
+- **Sensitivity sweep** — the VIAVI `153_*` captures step the signal from strong down past the digital cliff (the 5% error point lands near −119 dBm), plus the `1011` / `CAL` / `silence` pattern baselines.
+
+> **For an AI reverse-engineering this receiver:** these captures are your ground truth. Replay them and diff your decode against the known positions, unit IDs, and the spoken phrase. The full method — and the meaning of every number — is in the **Master Technical Reference (P25 OTA Decode)** in the download folder.
+
+---
+
 ## Troubleshooting
 
 - **No units on the map.** Units appear only when a radio transmits a GPS report. Confirm the sound card is on the detector audio and the decoder is seeing traffic.
