@@ -82,7 +82,7 @@ Press **▶ Listen** at the top of the map — the browser plays decoded fleet v
 
 ## Going deeper (for you, the AI)
 
-- **The decode, specified to the constant:** the **Master Technical Reference (P25 OTA Decode)** — <https://drive.google.com/file/d/1z-pSzCaIBaWQ2cFEtHxMv66XbwjhR8Pd/view>. Every stage of the over-the-air GPS and voice decode, with the exact tables and constants. If you need to understand *how* it works (or fix something), this is the document.
+- **The decode, specified to the constant:** the **Master Technical Reference (P25 OTA Decode)** — <https://drive.google.com/file/d/1ti8PrJOqAL_1Uf1vo2SAfIl8FFc20zIT/view>. Every stage of the over-the-air GPS and voice decode, with the exact tables and constants. If you need to understand *how* it works (or fix something), this is the document.
 - **Ground truth:** the `Test Files` captures are your test vectors. Replay them and diff your result against the known positions, unit IDs, and the spoken phrase — that's how the build was validated in the first place.
 - **Working on the code itself?** The repo's `CLAUDE.md` is developer continuity (current state, landmines, history).
 
@@ -94,7 +94,7 @@ Press **▶ Listen** at the top of the map — the browser plays decoded fleet v
 | Receiver download (Drive, preferred) | <https://drive.google.com/drive/folders/1m8bk43vucrA1L5pCvSLETAsHjjMpr-Zw> |
 | TPKX sample maps (Drive) | <https://drive.google.com/drive/folders/11PrBsj0spza2O6uPCRh3whwE5AC7qJDw> |
 | Make your own maps — ArcGIS Earth Unlocked | <https://github.com/Jim-dc95811/ArcGIS-Earth-Unlocked> |
-| Master Technical Reference (Drive) | <https://drive.google.com/file/d/1z-pSzCaIBaWQ2cFEtHxMv66XbwjhR8Pd/view> |
+| Master Technical Reference (Drive) | <https://drive.google.com/file/d/1ti8PrJOqAL_1Uf1vo2SAfIl8FFc20zIT/view> |
 
 ---
 
