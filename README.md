@@ -29,6 +29,17 @@ One program at the center, pulling from the radio, sound card and GPS — and sp
 
 ---
 
+## On any screen, your way
+
+Two one-tap touches at the top of the map:
+
+- **◻ Blank** — drop the imagery to a clean white canvas when you just want the units and how far apart they sit (relative positions and range/bearing stay exact); tap again for the map.
+- **📱 Phone** — a QR code any phone on the same Wi‑Fi can scan to open the live map — no app, no typing, no sign‑in.
+
+![Blank mode — a plain white canvas with three units (Jax 25, MY POSITION, Jax 24) — and the Phone panel open with a QR code and the box's address to scan](images/blank_and_phone.png)
+
+---
+
 ## What you plug in
 
 - **USB sound card → the radio's detector / discriminator audio** — the flat *detected* audio (e.g. a Kenwood NX-700 **DEO pin 19**, radio set **WIDE**), not the speaker/voice audio. This single feed carries **both** the GPS positions and the voice. A Sound Blaster Play! 3 is proven.
