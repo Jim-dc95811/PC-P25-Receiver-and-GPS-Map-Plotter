@@ -4,7 +4,7 @@
 
 ### 🌐 **[See the public project page →](https://jim-dc95811.github.io/PC-P25-Receiver-and-GPS-Map-Plotter/)**
 
-🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/1kFhra5zKXQeyN3yqg07gDuO3XLrV0cga/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
+🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/14rji6V92KkrKsT1JpcEqDK6jgNtAHjFf/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
 
 ![The whole rig — a BK KNG-M150 handing its discriminator audio to a USB sound card, a laptop running the receiver with the live fleet map, and a USB GPS puck for your own position](images/bk_rig_live.png)
 *The entire setup: a radio's detector audio into a USB sound card, a plain laptop running the receiver, a USB GPS for your own dot — the fleet's positions and voice straight off the air, on your own offline map.*
