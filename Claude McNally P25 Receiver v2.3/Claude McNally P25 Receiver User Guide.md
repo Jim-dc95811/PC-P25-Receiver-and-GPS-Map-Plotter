@@ -40,6 +40,7 @@ The first launch does a one-time setup (it installs three small helpers and show
 
 - **Each unit is plotted by its ID**, the dot matching the radio. **Green** = live, **amber** = stale.
 - **MY POSITION** is the teal dot — your own Garmin fix.
+- **Blank** (top of the map, next to Listen) drops the map imagery and shows just the blips on a plain **white background** — handy when you only want the units and how far apart they are, or when you have no map for the area. The blips stay in their true relative positions and the range/bearing readout is unchanged; your view doesn't move. Tap it again (it now reads **Map**) to bring the imagery back. The choice is remembered per device, so a phone that chose Blank stays blank.
 - **Maps** (top right) lists your maps and switches between them; **Pick a map (.tpkx)…** opens any map file on this PC.
 - **📱 Phone** (top right) shows a QR code. Scan it with any phone's camera on the same Wi-Fi and the map opens on the phone — no app, no typing. (The code carries this PC's network address, so it works from a phone even though typing the PC's name wouldn't.)
 - **Alias** (top right) lets you give a raw unit ID a crew name (e.g. `9076802` → *Jax 24*). Edit a name beside any ID, or type **any unit ID** in the bottom row to name a radio **before it ever transmits** (not just the ones on screen). Click **Save names**; it shows on the map within a few seconds. Names stick even when that radio isn't transmitting right now.

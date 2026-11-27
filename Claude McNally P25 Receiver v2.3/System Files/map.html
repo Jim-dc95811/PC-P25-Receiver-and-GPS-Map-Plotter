@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Claude McNally's P25 Receiver v2.2</title>
+<title>Claude McNally's P25 Receiver v2.3</title>
 <link rel="stylesheet" href="/leaflet.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -57,6 +57,11 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
 #listen{pointer-events:auto;cursor:pointer;background:#1f3a52;color:#bfe0ff;border:1px solid #255277;border-radius:7px;
  padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap}
 #listen.on{background:#1f6b3a;border-color:#3fae63;color:#eafff0}
+#blank{pointer-events:auto;cursor:pointer;background:#17344a;color:#bfe0ff;border:1px solid #255277;border-radius:7px;
+ padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+#blank.on{background:#1f6b3a;border-color:#3fae63;color:#eafff0}
+#map.blank{background:#fff}
+#map.blank .leaflet-tile-pane{display:none}
 #speaker{position:fixed;z-index:646;left:50%;transform:translateX(-50%);top:calc(54px + env(safe-area-inset-top,0px));
  display:none;align-items:center;gap:11px;background:rgba(18,30,40,.95);border:1px solid #2b6b4a;border-radius:22px;
  padding:7px 15px;color:#eafff0;font-weight:700;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
@@ -72,8 +77,8 @@ html,body{height:100%;background:#0b0f14;color:#e6eef6;font-family:-apple-system
 #phonebox .phint{color:#9fb3c8;font-size:12px;line-height:1.4;padding:4px 14px 2px;text-align:center}
 </style></head><body>
 <div id="map"></div>
-<div id="bar"><span id="title">McNALLY P25 &middot; v2.2</span><span id="mapname"></span>
-<span id="status"><button id="listen">&#128266; Listen</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><button id="phone">&#128241; Phone</button><span id="nac"></span><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
+<div id="bar"><span id="title">McNALLY P25 &middot; v2.3</span><span id="mapname"></span>
+<span id="status"><button id="listen">&#128266; Listen</button><button id="blank">&#9723; Blank</button><button id="alias">&#127991; Alias</button><button id="maps">&#128506; Maps</button><button id="phone">&#128241; Phone</button><span id="nac"></span><span id="clock">--:--:--</span><span id="count">0 units</span><i id="dot"></i></span></div>
 <div id="menu"></div>
 <div id="amenu"></div>
 <div id="phonebox"></div>
@@ -258,6 +263,23 @@ document.getElementById("listen").onclick=function(e){
     btn.classList.remove("on"); btn.innerHTML="&#128266; Listen";
   }
 };
+// ---- Blank: toggle the imagery off/on. Drops the basemap to a plain white canvas so only
+// the blips + MY POSITION show. Markers are placed by lat/lon with or without tiles, so their
+// true relative positions and the range/bearing readout are unchanged - just no map underneath.
+// Per-viewer, remembered across refreshes (a phone that chose blank stays blank).
+var mapEl=document.getElementById("map"), blankBtn=document.getElementById("blank");
+function setBlank(on){
+  if(on){ mapEl.classList.add("blank"); blankBtn.classList.add("on"); blankBtn.innerHTML="&#9723; Map"; }
+  else  { mapEl.classList.remove("blank"); blankBtn.classList.remove("on"); blankBtn.innerHTML="&#9723; Blank"; }
+  try{ localStorage.setItem("mcn_blank", on?"1":"0"); }catch(e){}
+}
+blankBtn.onclick=function(e){ e.stopPropagation();
+  document.getElementById("menu").style.display="none";
+  document.getElementById("amenu").style.display="none";
+  document.getElementById("phonebox").style.display="none";
+  setBlank(!mapEl.classList.contains("blank"));
+};
+try{ if(localStorage.getItem("mcn_blank")==="1") setBlank(true); }catch(e){}
 loadMaps();                    // resolves which map to show, then kicks pollMeta() for its tiles
 tick(); setInterval(tick,3000);
 setInterval(loadMaps,30000);   // pick up newly-added maps without a reload

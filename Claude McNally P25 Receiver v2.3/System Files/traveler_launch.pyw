@@ -51,7 +51,7 @@ class App:
         self.srv = None
         os.environ.setdefault("LOOKOUT_MAP_ROOTS", default_maps())
 
-        root.title("Claude McNally's P25 Receiver  v2.2")
+        root.title("Claude McNally's P25 Receiver  v2.3")
         root.configure(bg="#0d141c")
         root.geometry("460x270")
         try:
