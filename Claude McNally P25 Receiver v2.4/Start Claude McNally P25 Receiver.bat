@@ -2,8 +2,8 @@
 cd /d "%~dp0"
 set "PYEXE=py -3"
 where py >nul 2>nul || set "PYEXE=python"
-rem First run only: install the three helpers (this is the one time a window shows).
-%PYEXE% -c "import numpy, scipy, sounddevice" 2>nul || (echo Setting up Claude McNally's P25 Receiver ^(one-time install^) ... && %PYEXE% -m pip install numpy scipy sounddevice)
+rem First run only: install the helpers (this is the one time a window shows).
+%PYEXE% -c "import numpy, scipy, sounddevice, serial" 2>nul || (echo Setting up Claude McNally's P25 Receiver ^(one-time install^) ... && %PYEXE% -m pip install numpy scipy sounddevice pyserial)
 if not exist "%~dp0Maps" mkdir "%~dp0Maps"
 rem Launch the control window with pythonw so NO black command windows appear.
 set "PYWEXE=pythonw"

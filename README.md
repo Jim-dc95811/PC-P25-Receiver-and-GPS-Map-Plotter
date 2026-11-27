@@ -4,7 +4,7 @@
 
 ### 🌐 **[See the public project page →](https://jim-dc95811.github.io/PC-P25-Receiver-and-GPS-Map-Plotter/)**
 
-🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/14rji6V92KkrKsT1JpcEqDK6jgNtAHjFf/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
+🤖 **Setting this up with an AI's help?** Point your assistant at **[Build it with your AI — the full path from zero](https://drive.google.com/file/d/1evikR_7jtC8vTcsOu5FQwLWR1xKi08R5/view)** (Google Drive). It's written for your AI to walk you through the whole build — radio tap, install, maps, going live — even if you've never touched GitHub or Python. *(Working on the code itself? See [CLAUDE.md](CLAUDE.md).)*
 
 ![The whole rig — a BK KNG-M150 handing its discriminator audio to a USB sound card, a laptop running the receiver with the live fleet map, and a USB GPS puck for your own position](images/bk_rig_live.png)
 *The entire setup: a radio's detector audio into a USB sound card, a plain laptop running the receiver, a USB GPS for your own dot — the fleet's positions and voice straight off the air, on your own offline map.*
@@ -13,8 +13,11 @@ Every P25 radio already transmits its own position in a standardized, open forma
 
 No SDR. No base station. No internet, no cell, no cloud. No special dongle, no patent-encumbered part. One folder, one double-click.
 
-- **⬇️ Download (Google Drive):** [Claude McNally P25 Receiver v2.3](https://drive.google.com/drive/folders/1fVdPJrd___i4aROW7w6KSEqq2H7xG2Ni) — the ready-to-run folder (loose files, no browser security warning). *(The zip is also in this repo if you prefer: [`Claude_McNally_P25_Receiver_v2.3.zip`](Claude_McNally_P25_Receiver_v2.3.zip).)*
-- **📖 User guide:** [`Claude McNally P25 Receiver v2.3/Claude McNally P25 Receiver User Guide.pdf`](Claude%20McNally%20P25%20Receiver%20v2.3/Claude%20McNally%20P25%20Receiver%20User%20Guide.pdf)
+- **⬇️ Download (Google Drive):** [Claude McNally P25 Receiver v2.4](https://drive.google.com/drive/folders/1fVdPJrd___i4aROW7w6KSEqq2H7xG2Ni) — the ready-to-run folder (loose files, no browser security warning). *(The zip is also in this repo if you prefer: [`Claude_McNally_P25_Receiver_v2.4.zip`](Claude_McNally_P25_Receiver_v2.4.zip).)*
+- **📖 User guide:** [`Claude McNally P25 Receiver v2.4/Claude McNally P25 Receiver User Guide.pdf`](Claude%20McNally%20P25%20Receiver%20v2.4/Claude%20McNally%20P25%20Receiver%20User%20Guide.pdf)
+- **🔧 Hardware & setup reference:** [`Hardware & Setup Reference.pdf`](Claude%20McNally%20P25%20Receiver%20v2.4/Hardware%20%26%20Setup%20Reference.pdf) — what to connect, with specs for the radio tap, audio interface, and GPS.
+
+> **New in v2.4:** your own position (MY POSITION) now reads **either** a binary Garmin **or** a serial-NMEA GPS — a Garmin **GPS 18x PC/LVC** or any USB NMEA puck, auto-detected. No longer limited to the binary Garmin 18 USB.
 
 ![The live receiver in action — Listening active, the current speaker (Jax 25) named and ringed on the map, three units on Z20 offline imagery](images/live_z20.jpg)
 *Live, off the air — and you can hear it: the current speaker named and lit while your own position and the fleet ride your own Z20 imagery.*

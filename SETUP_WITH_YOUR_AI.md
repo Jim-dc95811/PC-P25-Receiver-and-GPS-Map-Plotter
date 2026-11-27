@@ -25,7 +25,7 @@ Walk the checklist with them:
 - **A P25 radio** (conventional Phase 1) with a **discriminator / detector audio output** — the *flat detected* audio, **not** the speaker/voice audio. Known taps: **Kenwood NX-700 → DB-25 pin 19 (DEO)**, radio set **WIDE**; **BK DPH → test point CZ8**. If they're unsure which pin, that's a radio question they can answer or look up in their radio's manual.
 - **A USB sound card** to carry that audio into the PC. A **Sound Blaster Play! 3** is proven. Wiring: **DEO → 4.7 µF capacitor → 2.2 kΩ resistor → the sound card's mic TIP**, ground → sleeve, mic boost **off**, input level **low**. (Don't add a bigger pad — it starves the input; the receiver normalizes level itself.)
 - **A Windows PC with Python 3** (from python.org — tick *Add python.exe to PATH* during install).
-- *Optional:* **a Garmin USB GPS** (GPS 18 USB) for the operator's own "you are here" dot. Everything works without it; the fleet still plots.
+- *Optional:* **a GPS** for the operator's own "you are here" dot. Either kind works — a **binary Garmin GPS 18 USB**, or a **serial-NMEA GPS** (a Garmin GPS 18x PC/LVC or any USB NMEA puck, set to output `GPGGA`). The receiver auto-detects whichever is plugged in. Everything works without a GPS; the fleet still plots.
 - **Offline maps** (`.tpkx` or `.mbtiles`) for their area — see **Move 4**. They don't need these to start.
 
 ### 2 · Get the software
@@ -35,7 +35,7 @@ Download the receiver — **prefer the Google Drive copy** (it won't trip a brow
 - **Drive (preferred):** <https://drive.google.com/drive/folders/1DDOvFRsdyi3SYFeYVto0o23hwNOcPVG9>
 - **GitHub:** <https://github.com/Jim-dc95811/PC-P25-Receiver-and-GPS-Map-Plotter>
 
-**Extract All** first (don't run from inside the zip). Inside there's **one** thing to double-click — `Start Claude McNally P25 Receiver.bat` — and a `System Files` folder holding everything else. The first launch installs three small Python helpers (`numpy`, `scipy`, `sounddevice`) automatically; the PC needs the internet that one time, then it runs fully offline.
+**Extract All** first (don't run from inside the zip). Inside there's **one** thing to double-click — `Start Claude McNally P25 Receiver.bat` — and a `System Files` folder holding everything else. The first launch installs a few small Python helpers (`numpy`, `scipy`, `sounddevice`, and `pyserial` for a serial GPS) automatically; the PC needs the internet that one time, then it runs fully offline.
 
 ### 3 · Prove it works — before any radio
 
@@ -75,7 +75,7 @@ Press **▶ Listen** at the top of the map — the browser plays decoded fleet v
 - **No units on the map** — units appear only when a radio transmits a GPS report. Confirm the sound card is on the *detector* audio (not speaker audio) and the radio is actually sending position.
 - **Nothing decodes but the radio is keying up** — set the receiving radio **WIDE**, open the squelch, check the level (clean, not clipping), 48 kHz, enhancements off.
 - **No map behind the units** — put a `.tpkx`/`.mbtiles` in `Maps` (Move 4), then refresh the browser.
-- **MY POSITION missing** — the Garmin needs a clear view of the sky; a degraded indoor fix is accepted, only a failed fix is dropped.
+- **MY POSITION missing** — the GPS needs a clear view of the sky; a degraded indoor fix is accepted, only a failed fix is dropped. For a **serial GPS**, also close anything holding its COM port (HyperTerminal, the Garmin config tool) so the receiver can open it.
 - **Sound card not found** — the control window's drop-down lists the inputs; pick the one the radio is wired to.
 
 ---

@@ -6,7 +6,7 @@
 2. Open the folder. There is **one** thing to double-click: **`Start Claude McNally P25 Receiver.bat`**. Everything else lives in the **System Files** folder — leave it alone.
 3. Windows may show a blue "Windows protected your PC" box the first time. Click **More info → Run anyway**.
 4. You need **Python 3** on the PC (from python.org — tick *Add python.exe to PATH* when you install it).
-5. The first run installs three small helpers automatically (`numpy`, `scipy`, `sounddevice`) — just wait a moment. The PC needs the internet that one time; after that it runs fully offline.
+5. The first run installs a few small helpers automatically (`numpy`, `scipy`, `sounddevice`, and `pyserial` for a serial GPS) — just wait a moment. The PC needs the internet that one time; after that it runs fully offline.
 
 ---
 
@@ -23,8 +23,43 @@ The radio is only ever **received** — this receiver never transmits or changes
 ## What you plug in
 
 - **USB sound card → the radio's detector / discriminator audio** (the flat *detected* audio — e.g. a Kenwood NX-700 **DEO pin 19** with the radio set **WIDE** — not the speaker/voice audio). This single audio feed carries **both** the GPS and the voice. A Sound Blaster Play! 3 is proven; wire DEO → 4.7 µF → 2.2 kΩ → the sound card's **mic tip**, ground → sleeve, mic boost off, level low.
-- **Garmin USB GPS → the PC** for **MY POSITION** (your own you-are-here dot). A Garmin GPS 18 USB is proven. Optional — without it, you still see the whole decoded fleet.
+- **A GPS → the PC** for **MY POSITION** (your own you-are-here dot). Two kinds work and the receiver reads either one automatically: a **binary Garmin GPS 18 USB**, or a **serial-NMEA GPS** — a Garmin **GPS 18x PC/LVC** or any USB NMEA puck. Optional — without a GPS you still see the whole decoded fleet. See **Setting up your GPS** below.
 - **Your maps** — your offline **`.tpkx` or `.mbtiles`** files, anywhere on this PC. Use **Maps → Pick a map (.tpkx)…** on the screen to choose the map file to view; every map in the same folder is listed too, so you can switch between them. (The `Maps` folder next to the `.bat` is a handy default spot.) No maps = the fleet still plots on a blank map; add maps to see the ground.
+
+---
+
+## Setting up your GPS — MY POSITION
+
+Your own position (the teal **MY POSITION** dot) comes from a GPS plugged into the PC. The receiver reads **two kinds automatically**, so there's nothing to pick in the app:
+
+- **Binary Garmin (GPS 18 USB).** Shows up in **Device Manager → GARMIN Devices → "Garmin USB GPS."** It speaks Garmin's own binary language. Plug it in — nothing to set.
+- **Serial-NMEA GPS (Garmin GPS 18x PC/LVC, or any USB NMEA puck).** The newer, more common kind. It shows up as a **COM port** — **Device Manager → Ports (COM & LPT) → "USB Serial Device (COMx)"** — and streams plain NMEA text. One quick one-time setup (below) and you're done.
+
+![A serial GPS shows up as a COM port, not under GARMIN Devices](guide_img/gps_devmgr.png)
+
+The receiver tries the binary Garmin first, then scans the COM ports for an NMEA GPS — whichever you have, MY POSITION just appears.
+
+### If your GPS is the serial kind — set it once
+
+A Garmin **GPS 18x PC/LVC** is configured with Garmin's free **Sensor Configuration Software (SNSRXCFG)** (search *"Garmin GPS 18x software"* at garmin.com). You only do this once:
+
+1. Plug the GPS in. In **Device Manager → Ports (COM & LPT)**, note its **COM number** (COM6 here).
+2. Open **SNSRXCFG** and connect to that COM port.
+3. Make sure **"Garmin Binary Output" is UNCHECKED.** That's what keeps it talking plain NMEA — checking it switches the puck to binary and the serial reader won't see it.
+4. Note the **Baud Rate** (9600 here; 4800 is the factory default — either is fine, the receiver finds the speed on its own).
+5. In the NMEA sentence list, make sure **GPGGA is enabled** — that's the sentence that carries position. Click **OK**.
+
+![SNSRXCFG — Garmin Binary Output off, 9600 baud, NMEA 2.0, GPGGA enabled](guide_img/gps_snsrxcfg.png)
+
+### Confirm it's streaming
+
+It helps to see the GPS actually talking before you run the receiver. Any serial terminal works (HyperTerminal shown), or the small **GPS Port Checker** tool — either way you want to see `$GPGGA,…` lines once a second:
+
+![A healthy serial GPS: $GPGGA once a second on COM6 at 9600 — position, fix, satellites](guide_img/gps_hyperterm.png)
+
+Then start the receiver normally. **MY POSITION** drops onto your location within a few seconds.
+
+> **One gotcha — a COM port opens for one program at a time.** If HyperTerminal or SNSRXCFG is still connected to the GPS, **close it first**, or the receiver can't open the port. In the control window's `System Files\decoder_log.txt` you'll see `serial GPS on COM6 @ 9600 baud` when it's reading, or `waiting for a GPS…` if the port is busy or the GPS isn't streaming yet.
 
 ---
 
@@ -32,7 +67,7 @@ The radio is only ever **received** — this receiver never transmits or changes
 
 Double-click **`Start Claude McNally P25 Receiver.bat`**. A small control window opens — the decoder and map server run quietly in the background, with **no command windows**. Pick your **radio input** from the drop-down, and your browser opens the live map at `http://localhost:8080`. You'll see the startup badge, then it clears to the map. **Close the control window (or click Stop) to shut everything down.**
 
-The first launch does a one-time setup (it installs three small helpers and shows a window briefly); after that it runs fully offline.
+The first launch does a one-time setup (it installs the helpers and shows a window briefly); after that it runs fully offline.
 
 ---
 
@@ -83,7 +118,7 @@ What's in there (a `README.txt` in the folder describes every file):
 ## Troubleshooting
 
 - **No units on the map.** Units appear only when a radio transmits a GPS report. Confirm the sound card is on the detector audio and the decoder is seeing traffic.
-- **MY POSITION missing.** The Garmin needs a clear view of the sky to get a fix; give it a minute outdoors. (A degraded indoor fix is accepted — only a failed fix is dropped.)
+- **MY POSITION missing.** First, the GPS needs a clear view of the sky — give it a minute outdoors (a degraded indoor fix is accepted; only a failed fix is dropped). For a **serial GPS**, also make sure nothing else is holding its COM port (close HyperTerminal or the Garmin config tool), and check `System Files\decoder_log.txt`: `serial GPS on COM6 @ 9600 baud` means it's reading, `waiting for a GPS…` means the port is busy or the GPS isn't streaming NMEA yet. See **Setting up your GPS**.
 - **No map behind the units.** Put a `.tpkx` or `.mbtiles` for your area in the `Maps` folder (or pick one with **Maps → Pick a map**), then refresh the browser.
 - **No voice when I press Listen.** Make sure a unit is actually keyed up — the receiver only plays decoded traffic, and it plays the whole key-up *after* the unit un-keys. Check the sound card is on the detector audio.
 - **Sound card not found.** The control window's drop-down lists the inputs — pick the USB sound card the radio is wired to.

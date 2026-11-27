@@ -46,7 +46,7 @@ from combo_core import ComboDecoder      # GPS + CURRENT SPEAKER + voice, one st
 import imbe_decode                       # pure-Python IMBE voice -> PCM (no binary)
 from voice_ws import VoiceWS             # stream decoded PCM to the map's Listen button
 
-VERSION = "1.3"                   # The Traveler PC -- combo platter (GPS + voice)
+VERSION = "2.4"                   # McNally receiver -- GPS + voice, now reads serial GPS too
 RATE = 48000                      # ask the card for 48 kHz mono (integer 10 sps)
 BLOCK = 2048                      # callback block size
 DEV_HINTS = ("blaster", "sb play", "usb audio", "usb-audio", "usb pnp", "line (")
@@ -148,37 +148,92 @@ def _self_gga(lat, lon):
         t, lad, lam, ns, lod, lom, ew)
     return _nmea_mk(body)
 
-def _self_gps_loop(server):
+def _run_garmin(garmin_usb, broadcast_fix):
+    """Read the binary Garmin (GPS 18 USB) -- the proven path, logic unchanged.
+    Blocks until the unit is lost, then returns so the caller can re-scan."""
+    g = garmin_usb.GarminUSB()
+    g.open(); g.start_pvt()
+    print("   .. MY POSITION: Garmin USB (binary) connected")
+    try:
+        while True:
+            fx = g.read_fix()
+            # Jim's correction: trust a fix of 1+ (reject only 0, failed-integrity);
+            # a degraded indoor/canopy fix is exactly what a firefighter gets.
+            if fx and fx.get("fix", 0) >= 1 and _coords_ok(fx["lat"], fx["lon"]):
+                broadcast_fix(fx["lat"], fx["lon"])
+    finally:
+        try: g.stop_pvt(); g.close()
+        except Exception: pass
+
+
+def _run_serial(nmea_gps, found, broadcast_fix):
+    """Read a COM-port NMEA GPS (Garmin 18x PC/LVC, u-blox puck, etc.). Blocks
+    until the port is lost, then returns so the caller can re-scan."""
+    port, baud = found
+    gps = nmea_gps.NmeaGPS(port, baud)
+    gps.open()
+    print("   .. MY POSITION: serial GPS on %s @ %d baud (NMEA)" % (port, baud))
+    try:
+        while True:
+            fx = gps.read_fix()
+            if fx and fx.get("fix", 0) >= 1 and _coords_ok(fx["lat"], fx["lon"]):
+                broadcast_fix(fx["lat"], fx["lon"])
+            time.sleep(0.2)
+    finally:
+        gps.close()
+
+
+def _self_gps_loop(server, serial_hint=None):
+    """MY POSITION. Reads the PC's own GPS and folds it into the :10110 feed as the
+    SELF unit. Handles BOTH kinds automatically: a binary Garmin (GPS 18 USB) first,
+    then any COM-port NMEA GPS (Garmin 18x PC/LVC, u-blox puck). No GPS -> the map
+    still shows the decoded fleet, just without MY POSITION."""
+    pp = _nmea_mk("PP25,%s," % SELF_ID)         # self unit id, map shows it as MY POSITION
+    last = [0.0]
+
+    def broadcast_fix(lat, lon):
+        now = time.time()
+        if now - last[0] >= SELF_EVERY_S:
+            server.broadcast(_self_gga(lat, lon))
+            server.broadcast(pp)
+            last[0] = now
+
     try:
         import garmin_usb
-    except Exception as e:
-        print("   .. MY POSITION unavailable (no Garmin reader: %s)" % e)
+    except Exception:
+        garmin_usb = None
+    try:
+        import nmea_gps
+    except Exception:
+        nmea_gps = None
+    if garmin_usb is None and nmea_gps is None:
+        print("   .. MY POSITION unavailable (no GPS reader modules)")
         return
-    pp = _nmea_mk("PP25,%s," % SELF_ID)         # self unit id, map shows it as MY POSITION
-    last = 0.0
+
+    waiting = False
     while True:
         try:
-            if not garmin_usb.device_present():
-                time.sleep(3.0); continue
-            g = garmin_usb.GarminUSB()
-            g.open(); g.start_pvt()
-            print("   .. MY POSITION: Garmin GPS connected")
-            try:
-                while True:
-                    fx = g.read_fix()
-                    # Jim's correction: trust a fix of 1+ (reject only 0, failed-integrity);
-                    # a degraded indoor/canopy fix is exactly what a firefighter gets.
-                    if fx and fx.get("fix", 0) >= 1 and _coords_ok(fx["lat"], fx["lon"]):
-                        now = time.time()
-                        if now - last >= SELF_EVERY_S:
-                            server.broadcast(_self_gga(fx["lat"], fx["lon"]))
-                            server.broadcast(pp)
-                            last = now
-            finally:
-                try: g.stop_pvt(); g.close()
-                except Exception: pass
+            # 1) Binary Garmin (GPS 18 USB) -- proven path, tried first.
+            if garmin_usb is not None:
+                try: present = garmin_usb.device_present()
+                except Exception: present = False
+                if present:
+                    _run_garmin(garmin_usb, broadcast_fix)
+                    waiting = False
+                    continue
+            # 2) COM-port NMEA GPS (GPS 18x PC/LVC, u-blox puck) -- sealed reader.
+            if nmea_gps is not None:
+                found = nmea_gps.find_port(hint=serial_hint)
+                if found:
+                    _run_serial(nmea_gps, found, broadcast_fix)
+                    waiting = False
+                    continue
+            if not waiting:
+                print("   .. MY POSITION: waiting for a GPS (USB Garmin or a COM-port NMEA puck) ...")
+                waiting = True
+            time.sleep(3.0)
         except Exception as e:
-            print("   .. MY POSITION: lost the Garmin (%s); retrying" % e)
+            print("   .. MY POSITION: GPS dropped (%s); re-scanning" % e)
             time.sleep(3.0)
 
 
@@ -438,7 +493,12 @@ def main():
         server = NmeaServer(port); server.start()
         vws = VoiceWS().start()          # decoded voice -> the map's Listen button
         if "--self-gps" in args:
-            threading.Thread(target=_self_gps_loop, args=(server,), daemon=True).start()
+            hint = None                       # optional --gps-serial COMx[:baud] override
+            if "--gps-serial" in args:
+                j = args.index("--gps-serial")
+                if j + 1 < len(args):
+                    hint = args[j + 1]
+            threading.Thread(target=_self_gps_loop, args=(server, hint), daemon=True).start()
     # replay if a wav was given (--replay <wav> or a bare .wav arg)
     wav = None
     for i, a in enumerate(args):
