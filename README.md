@@ -33,7 +33,7 @@ One program at the center, pulling from the radio, sound card and GPS — and sp
 
 Two one-tap touches at the top of the map:
 
-- **◻ Blank** — drop the imagery to a clean white canvas when you just want the units and how far apart they sit (relative positions and range/bearing stay exact); tap again for the map.
+- **◻ Blank** — **no maps needed to get going:** drop to a clean white canvas and you've got a working relative‑position scope — the fleet and their spread, range and bearing exact — from the first transmission, before you've made a single map. Add imagery later; tap again for the map.
 - **📱 Phone** — a QR code any phone on the same Wi‑Fi can scan to open the live map — no app, no typing, no sign‑in.
 
 ![Blank mode — a plain white canvas with three units (Jax 25, MY POSITION, Jax 24) — and the Phone panel open with a QR code and the box's address to scan](images/blank_and_phone.png)
