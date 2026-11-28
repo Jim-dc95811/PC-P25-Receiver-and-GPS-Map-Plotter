@@ -1,0 +1,158 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Audio Capture Engineering Reference</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#24323f;
+ font-size:10.6pt;line-height:1.55;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1{font-size:25pt;font-weight:800;color:#16365c;margin:.1em 0 .15em;line-height:1.15}
+.sub{color:#5a6b7b;font-size:12pt;margin:0 0 .3em}
+.by{color:#8595a4;font-size:9.5pt;border-bottom:3px solid #16365c;padding-bottom:1em;margin-bottom:1.4em}
+h2{position:relative;font-size:15pt;font-weight:700;color:#16365c;border-top:1px solid #e1e6ea;
+ padding:.95em 0 0 15px;margin:1.9em 0 .7em}
+h2::before{content:"";position:absolute;left:0;top:1.08em;width:6px;height:1.05em;background:#16365c}
+h3{font-size:11.6pt;font-weight:700;color:#1b4a74;margin:1.25em 0 .35em}
+p,li{margin:.5em 0}
+strong{color:#16365c;font-weight:700}
+em{color:#33475b}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef1f4;color:#294058;
+ padding:.08em .34em;border-radius:3px;font-size:.86em}
+pre{background:#0f2133;color:#dbe6f0;border-radius:6px;padding:.85em 1em;overflow:auto;font-size:8.6pt;line-height:1.45}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+ul,ol{padding-left:1.45em;margin:.5em 0}
+li{margin:.32em 0}
+hr{border:0;border-top:1px solid #e1e6ea;margin:1.6em 0}
+table{border-collapse:collapse;margin:1em 0;width:100%;font-size:9.3pt}
+th,td{border:1px solid #d3dae1;padding:.4em .55em;text-align:left;vertical-align:top}
+th{background:#16365c;color:#fff;font-weight:600}
+tr:nth-child(even) td{background:#f5f8fa}
+.callout{border-left:4px solid #1b7a46;background:#f0f8f3;padding:.6em .9em;margin:1em 0;border-radius:0 4px 4px 0}
+.warn{border-left:4px solid #b5862a;background:#fbf6ec;padding:.6em .9em;margin:1em 0;border-radius:0 4px 4px 0}
+.lede{font-size:11pt;color:#33475b}
+.tag{display:inline-block;background:#16365c;color:#fff;font-size:7.5pt;font-weight:700;letter-spacing:.04em;
+ padding:.12em .5em;border-radius:3px;vertical-align:middle;margin-left:.4em}
+.step{font-weight:700;color:#16365c}
+.gloss dt{font-weight:700;color:#16365c;margin-top:.6em}
+.gloss dd{margin:.1em 0 0 1.2em;color:#33475b}
+</style></head><body>
+
+<h1>The Audio-Capture Path</h1>
+<p class="sub">Getting the radio's audio into the decoder, cleanly — an engineering reference</p>
+<p class="by">Claude McNally's PC P25 Receiver &amp; GPS Map Plotter &nbsp;·&nbsp; v2.6 &nbsp;·&nbsp; 2026‑11‑27</p>
+
+<p class="lede">This document explains, end to end, how the receiver gets the radio's detector audio off the sound card and into the decoder <em>without Windows altering it</em> — why that matters, the audio‑level science behind it, and the four separate bugs that stood between "we asked for exclusive mode" and "exclusive mode actually engaged." It is written for a radio engineer who is not a Windows‑audio specialist: every term is explained where it first appears, and there is a glossary at the end.</p>
+
+<h2>1 · What this subsystem does, and where it sits</h2>
+<p>The receiver turns a P25 radio's <strong>detector (discriminator) audio</strong> — the raw demodulated baseband, not the speaker audio — into decoded GPS positions and voice, plotted on an offline map. The very first link in that chain is the one this document covers: <strong>reading the audio samples off the USB sound card.</strong> Everything downstream (the C4FM symbol recovery, framing, FEC, the IMBE voice decode) depends on those samples being a faithful copy of what the radio produced.</p>
+<p>The physical path:</p>
+<pre><code>radio detector output  →  USB sound card (line/mic input)  →  Windows  →  Python (sounddevice)  →  decoder
+  (analog baseband)        (ADC: analog → 16‑bit samples)    ( ??? )      (our capture code)     (DSP)</code></pre>
+<p>The whole fight in this document is about that <code>??? </code> box — what Windows does to the samples between the sound card's analog‑to‑digital converter (<strong>ADC</strong>) and our program — and how to make it do <em>nothing</em>.</p>
+
+<h2>2 · Does the audio <em>level</em> matter? — the science that shaped the design</h2>
+<p>Before touching Windows, we answered a more basic question the honest way: <strong>does the input level affect how well the signal decodes?</strong> If it did, the receiver would need a level meter and a calibration step. If it didn't, all of that could be deleted.</p>
+<p>Two facts about the signal:</p>
+<ul>
+<li><strong>The level is hardware‑fixed.</strong> The radio's detector output is a fixed amplitude, and the sound card's ADC turns it into samples at a fixed scale. Nothing the operator does changes it — short of the Windows slider, which is exactly the variable we want to remove.</li>
+<li><strong>The hiss‑to‑signal ratio is a fixed ~3:1.</strong> Between transmissions the open squelch delivers broadband receiver noise ("hiss"); a C4FM packet is <em>quieter</em> than that hiss by a fixed ratio (FM quieting). That ratio is a property of the radio's design and varies only a few percent across units — component tolerance.</li>
+</ul>
+<p>We then measured it directly. Using real <strong>STD 153 (ITU‑T O.153)</strong> pattern recordings captured at eight RF levels from −50 to −120&nbsp;dBm, we swept the digital level from near‑zero to full scale and scored the <strong>bit error rate (BER)</strong> at each step. The result is a flat bathtub with one steep wall:</p>
+<div class="callout"><strong>Finding:</strong> audio input level does <strong>not</strong> affect decode BER. The error floor is set by <strong>RF signal‑to‑noise ratio</strong>, not by level. Level only matters in one way — <strong>stay off the clip wall.</strong> Past roughly 70% of full scale the hiss peaks begin to clip, and <em>then</em> BER rockets from near‑zero to 40–50%. Below that wall, a huge range of levels all decode identically. (The left/quantization wall is buried ~70&nbsp;dB down by 16‑bit depth, so it never bites.)</div>
+<p>This is why the receiver ships with <strong>no level meter and no calibration step.</strong> The one real risk — clipping — is removed structurally by capturing in exclusive mode (next sections), which takes the Windows level slider out of the path entirely so the fixed hardware level lands mid‑bathtub and can't be driven into the wall. "A person can't go wrong."</p>
+<p class="warn"><strong>The clip wall is not academic.</strong> During this very session, with the receiver mistakenly running in <em>shared</em> mode, turning the Windows mic level to 100% drove the hiss into clipping and killed the decode; turning it back down restored it instantly. That behavior was the smoking gun that exclusive mode was not actually engaged — see §5.</p>
+
+<h2>3 · What Windows does to microphone audio (shared mode)</h2>
+<p>By default, every app on Windows shares the sound card through the <strong>Windows audio engine</strong>. The engine is a software mixer, and for a capture device it can apply, in order, before your app ever sees a sample:</p>
+<ul>
+<li><strong>A level/volume multiply</strong> — the "Microphone" slider in Sound&nbsp;→&nbsp;Recording&nbsp;→&nbsp;Levels. At 100% it can <em>amplify</em> past the card's natural scale, which is how shared mode clips our hiss.</li>
+<li><strong>Automatic gain, "enhancements," noise suppression, echo cancellation</strong> — voice‑oriented processing that is helpful for a headset and poison for a C4FM baseband.</li>
+<li><strong>Resampling</strong> to the engine's shared mixing format.</li>
+</ul>
+<p>This path is called <strong>WASAPI shared mode</strong> (Windows Audio Session API). It is the right default for ordinary apps and the wrong thing for us: we want the <em>exact</em> samples the ADC produced, with Windows contributing nothing.</p>
+
+<h2>4 · WASAPI exclusive mode — the intercept</h2>
+<p>WASAPI has a second path: <strong>exclusive mode.</strong> An app that opens a capture device exclusively <em>owns</em> that device. The samples flow straight from the ADC to the app with the audio engine bypassed — no level multiply, no enhancements, no resampling. This is exactly what we want, and it is the entire point of what the product calls the <em>"intercept."</em></p>
+<p>Exclusive mode has three preconditions, and getting all three right on a real machine is the subject of the rest of this document:</p>
+<ol>
+<li>The Windows checkbox <em>"Allow applications to take exclusive control of this device"</em> must be ticked (Recording&nbsp;→&nbsp;device&nbsp;→&nbsp;Properties&nbsp;→&nbsp;Advanced). This is a one‑time operator step.</li>
+<li>You must open the device's <strong>WASAPI</strong> instance — not one of its other operating‑system instances (§5.1).</li>
+<li>You must request a <strong>format and buffer size the hardware supports exactly</strong>, because exclusive mode does no conversion of any kind (§5.2).</li>
+</ol>
+
+<h2>5 · The saga — four bugs between "we wrote exclusive" and "exclusive engaged"</h2>
+<p>The receiver's capture code <em>asked</em> for exclusive mode from the start (<code>sounddevice.WasapiSettings(exclusive=True)</code>). On the developer's bench it appeared to work. On the operator's machine it silently fell back to shared every time — and because the fallback is silent, nothing looked broken except the one behavioral tell (the volume slider still changed the decode). Four distinct faults had to be cleared.</p>
+
+<h3>5.1 · Bug one — opening the wrong instance of the card <span class="tag">PaErrorCode −9984</span></h3>
+<p>Windows exposes each physical sound card <strong>once per host API</strong>. A host API is a driver family — Windows has four: <strong>MME</strong> (oldest), <strong>DirectSound</strong>, <strong>WASAPI</strong>, and <strong>WDM‑KS</strong>. So one USB sound card enumerates as four separate "devices." On the operator's machine the single UFO202‑class card appeared as:</p>
+<table>
+<tr><th>Index</th><th>Host API</th><th>Channels</th><th>Rate</th><th>Name as reported</th></tr>
+<tr><td>1</td><td>MME</td><td>2</td><td>44100</td><td><code>Microphone (2- USB Audio CODEC </code> <em>(truncated)</em></td></tr>
+<tr><td>7</td><td>DirectSound</td><td>2</td><td>44100</td><td><code>Microphone (2- USB Audio CODEC )</code></td></tr>
+<tr><td><strong>15</strong></td><td><strong>WASAPI</strong></td><td><strong>1</strong></td><td><strong>48000</strong></td><td><code>Microphone (2- USB Audio CODEC )</code></td></tr>
+<tr><td>23</td><td>WDM‑KS</td><td>2</td><td>44100</td><td><code>Microphone (USB Audio CODEC)</code></td></tr>
+</table>
+<p><strong>Exclusive mode is a WASAPI concept.</strong> The <code>WasapiSettings</code> object is WASAPI‑specific stream information. If you attach it to a device whose host API is <em>not</em> WASAPI — say the MME instance at index 1 — PortAudio (the cross‑platform audio library under <code>sounddevice</code>) rejects the combination with error <strong>−9984, <code>paIncompatibleHostApiSpecificStreamInfo</code></strong> — "you handed WASAPI settings to a non‑WASAPI device." The receiver caught that error and quietly fell back to shared.</p>
+<p>So the first requirement is to find and open <strong>index 15</strong> specifically. The code now queries the host‑API list, finds the WASAPI one, and ranks the WASAPI instances of the card first.</p>
+
+<h3>5.2 · Bug two — a buffer size the hardware didn't allow <span class="tag">AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED</span></h3>
+<p>Even on the correct WASAPI device, a second fault remained. Shared mode will re‑block audio into whatever chunk size you ask for; <strong>exclusive mode will not.</strong> In exclusive mode the application's buffer must align to the device's hardware period. The receiver was forcing a fixed <code>blocksize = 2048</code> frames. When that doesn't match the device's aligned period, the low‑level <code>IAudioClient::Initialize</code> call fails with <code>AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED</code>, which surfaces as yet another exception — and again, silent fallback to shared.</p>
+<p>This was the subtle one, because it was invisible in isolation: the diagnostic self‑check captured with <code>sounddevice.rec()</code>, which leaves the block size <strong>unspecified (0)</strong> and lets WASAPI choose the device‑aligned buffer — so the self‑check got exclusive while the receiver, forcing 2048, did not. The two differed by exactly one argument.</p>
+<div class="callout"><strong>Fix:</strong> open the capture stream with <code>blocksize = 0</code> and let WASAPI pick the hardware‑aligned period (~10&nbsp;ms blocks). The decoder's callback already accepts any block length, so nothing downstream cares. The bounded capture queue was re‑sized for the smaller native blocks so its backlog stays correct and memory stays bounded.</div>
+
+<h3>5.3 · Bug three — the launcher was choosing the wrong instance for us</h3>
+<p>With the two fixes above, the <em>auto‑selection</em> path chose index 15 correctly. But the receiver is normally started by its one‑window launcher, which has a "Radio input" dropdown and passes the chosen device to the decoder as <code>--device=N</code>. That dropdown lists <em>every</em> instance of the card (indices 1, 7, 15, 23 all named almost identically), and its default was the first match — <strong>the MME copy, index 1.</strong> So the launcher was explicitly forcing the one device that cannot do exclusive, overriding the auto‑selection, and we were back to −9984.</p>
+<p>The robust fix is to make the receiver <strong>resolve whatever device it is handed to that card's WASAPI twin</strong> before opening — whether the index came from the launcher, from auto‑detect, or from a manual prompt. Given a chosen device, it finds the WASAPI‑host‑API input that belongs to the same physical card and uses that instead.</p>
+<div class="warn"><strong>Name‑matching gotcha:</strong> you cannot match the twin by exact name. <strong>MME truncates device names to 31 characters</strong>, so the MME instance reads <code>…USB Audio CODEC </code> (trailing space, no closing parenthesis) while the WASAPI instance reads <code>…USB Audio CODEC )</code>. The resolver therefore normalizes both names to alphanumerics only (<code>microphone2usbaudiocodec</code>) and matches on a prefix, which survives the truncation and the punctuation difference.</div>
+
+<h3>5.4 · The gotcha that hid everything — a buffered log</h3>
+<p>Through much of the hunt the decoder log looked <em>empty</em>, which made it impossible to see whether exclusive had engaged. The cause was unrelated to audio: when the launcher redirects the decoder's output to <code>decoder_log.txt</code>, Windows <strong>block‑buffers stdout</strong> (it only flushes in large chunks when output isn't a console). So the status line <code>audio capture: EXCLUSIVE/shared mode</code> — an ordinary <code>print()</code> — sat in a buffer and never reached the file, while Python warnings (which go to <em>stderr</em>, unbuffered) were the only thing that ever appeared. Reconfiguring stdout/stderr to <strong>line‑buffered</strong> at startup made the log live, and the truth became visible immediately.</p>
+
+<h2>6 · The method that cracked it — isolate before you integrate</h2>
+<p>The decisive move, at the operator's insistence, was to stop testing through the full program and write a <strong>tiny direct probe</strong> that did one thing: enumerate every input device with its host API, then try to open the card's WASAPI instance in exclusive mode and print exactly what happened, at 1 and 2 channels, via both a callback stream and <code>rec()</code>. One run turned four invisible silent fallbacks into one readable table:</p>
+<pre><code>idx 15  [Windows WASAPI]  'Microphone (2- USB Audio CODEC )'
+      InputStream  ch1 @ 48000Hz:  EXCLUSIVE OK
+      InputStream  ch2 @ 48000Hz:  FAIL -- Invalid number of channels [-9998]
+idx 1   [MME]  ...   FAIL -- Incompatible host API specific stream info [-9984]
+idx 7   [DirectSound] ... FAIL -- -9984
+idx 23  [WDM-KS] ...      FAIL -- -9984</code></pre>
+<p>That single table named the winning recipe unambiguously — <strong>index 15, WASAPI, one channel, 48&nbsp;kHz, callback stream</strong> — and proved the other three instances could never work. Everything after was mechanical. The lesson is general: when a feature fails silently inside a large program, reproduce it in the smallest possible standalone script first; the error you can't see in the product is usually plainly printed by ten lines in isolation.</p>
+
+<h2>7 · The final working recipe</h2>
+<ol>
+<li><span class="step">Select a device</span> (launcher dropdown, auto‑detect, or prompt). Any instance of the card is acceptable as input here.</li>
+<li><span class="step">Resolve to the WASAPI twin</span> — find the WASAPI‑host‑API input belonging to the same physical card (normalized‑prefix name match, truncation‑safe).</li>
+<li><span class="step">Open exclusive with a native format</span> — <code>WasapiSettings(exclusive=True)</code>, <code>dtype=int16</code>, <code>blocksize=0</code> (device‑aligned), trying 1 channel then 2.</li>
+<li><span class="step">Fall back to shared</span> only if exclusive genuinely cannot open, and say so in the log. (Shared still decodes correctly — see §2 — it just re‑exposes the level slider.)</li>
+</ol>
+<pre><code>dev, name = pick_device(sd, forced)          # launcher --device, auto, or prompt
+dev, name = _resolve_wasapi(sd, dev, name)   # -> the card's WASAPI instance
+es = sd.WasapiSettings(exclusive=True)
+stream = sd.InputStream(device=dev, channels=1, samplerate=48000,
+                        blocksize=0, dtype="int16", callback=cb,
+                        extra_settings=es)   # EXCLUSIVE 1ch @ 48000</code></pre>
+
+<h2>8 · How you know it is working</h2>
+<ul>
+<li><strong>The log.</strong> With line‑buffered output, <code>decoder_log.txt</code> prints <code>.. audio capture: EXCLUSIVE 1ch mode</code> and <code>listening on: Microphone (2- USB Audio CODEC )</code> — note the closing parenthesis, which identifies the WASAPI instance rather than the truncated MME name.</li>
+<li><strong>The volume‑slider test (definitive).</strong> With the receiver running, set the Windows microphone Level to 100%. In <em>shared</em> mode this drives the hiss into clipping and the decode stalls; in <em>exclusive</em> mode it has <strong>no effect at all</strong>, because the slider is out of the path. Confirmed on the bench: at Level 100 the fleet kept plotting without a hiccup.</li>
+</ul>
+
+<h2>9 · The one‑click self‑check</h2>
+<p>The package ships a <code>Troubleshooting/</code> folder with a one‑click self‑check that inspects the whole chain and prints <em>PASS / WARN / FAIL</em> per piece: Python, the package files, the required libraries, internet reach (only needed for the one‑time install, with an offer to fetch missing libraries), the decode engine import, a one‑second live audio reading (silent → cable; clipping → too hot; ~55–65% peak → the open‑squelch hiss, good — and it reports whether it got <strong>EXCLUSIVE</strong> or shared, and why), the GPS, and the network ports. It uses the same WASAPI‑instance selection described here, so it is also a quick way to confirm the card can do exclusive before the receiver is even started.</p>
+
+<h2>10 · Glossary</h2>
+<dl class="gloss">
+<dt>ADC (analog‑to‑digital converter)</dt><dd>The chip in the sound card that turns the radio's analog baseband into 16‑bit numbers. Exclusive mode delivers these untouched.</dd>
+<dt>WASAPI</dt><dd>Windows Audio Session API — the modern Windows audio interface. Has two modes: <em>shared</em> (through the mixer) and <em>exclusive</em> (direct to hardware).</dd>
+<dt>Shared mode</dt><dd>The default. Windows mixes, levels, and may "enhance" the audio before your app sees it. Exposes the volume slider.</dd>
+<dt>Exclusive mode</dt><dd>Your app owns the device; samples flow straight from the ADC with the Windows engine bypassed. No level, no effects, no resampling.</dd>
+<dt>Host API</dt><dd>A Windows audio driver family: MME, DirectSound, WASAPI, or WDM‑KS. One physical card appears once under each, so it looks like four devices.</dd>
+<dt>PortAudio / sounddevice</dt><dd>PortAudio is the cross‑platform C audio library; <code>sounddevice</code> is the Python wrapper the receiver uses to open streams.</dd>
+<dt>blocksize</dt><dd>How many audio frames per callback. In exclusive mode it must align to the hardware period; passing 0 lets WASAPI choose a valid size.</dd>
+<dt>BER (bit error rate)</dt><dd>The fraction of decoded symbols that are wrong. Set by RF signal‑to‑noise, not by audio level — until the level clips.</dd>
+<dt>FM quieting</dt><dd>The effect that makes a received signal <em>reduce</em> the FM receiver's noise; it is why a C4FM packet reads <em>lower</em> than the between‑transmission hiss (~3:1).</dd>
+<dt>−9984 / −9998</dt><dd>PortAudio errors seen here: −9984 = WASAPI settings on a non‑WASAPI device; −9998 = a channel count the device doesn't support in exclusive mode.</dd>
+</dl>
+
+<hr>
+<p style="color:#8595a4;font-size:9pt">Claude McNally's PC P25 Receiver &amp; GPS Map Plotter — audio‑capture engineering reference, v2.6. Receive‑only throughout: a radio is never transmitted to or altered.</p>
+
+</body></html>
