@@ -334,7 +334,7 @@ def run_live(server, vws=None):
     # catches up after. If the decoder ever falls a full minute behind (pathological
     # continuous traffic), the OLDEST block is dropped so memory can never grow without
     # bound -- counted and reported, because a drop means some audio was lost under load.
-    qmax = max(64, int(QUEUE_BACKLOG_S * rate / BLOCK))
+    qmax = max(64, int(QUEUE_BACKLOG_S * rate / 480))   # WASAPI exclusive hands small (~10 ms) blocks
     q = queue.Queue(maxsize=qmax)
     drops = {"n": 0}
     def cb(indata, frames, tinfo, status):
@@ -381,13 +381,16 @@ def run_live(server, vws=None):
     # Windows audio engine (level/mixer/resampler) -- so the feed can't be re-leveled or
     # varnished by Windows. Falls back to shared mode cleanly if exclusive can't be had.
     def _open_capture():
-        # exclusive does no resampling, so the format must match the card's exclusive
-        # format -- try mono then stereo (a USB mic may only expose 2ch in exclusive).
+        # exclusive does no resampling AND no buffer re-blocking: the client buffer must
+        # match the device's hardware-aligned period, so pass blocksize=0 (let WASAPI pick
+        # the aligned size) -- a forced size (e.g. 2048) fails exclusive init with
+        # AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED and silently drops to shared. Also try mono
+        # then stereo (a USB mic may only expose 2ch in exclusive). cb handles any length.
         last = None
         for ch in (1, 2):
             try:
                 es = sd.WasapiSettings(exclusive=True)
-                s = sd.InputStream(device=dev, channels=ch, samplerate=rate, blocksize=BLOCK,
+                s = sd.InputStream(device=dev, channels=ch, samplerate=rate, blocksize=0,
                                    dtype="int16", callback=cb, extra_settings=es)
                 return s, "EXCLUSIVE %dch" % ch
             except Exception as ee:
@@ -395,7 +398,7 @@ def run_live(server, vws=None):
         print("   .. exclusive mode unavailable (%s); using shared mode." % last)
         print("      Tick 'Allow applications to take exclusive control' on this input's")
         print("      Advanced tab in Windows Sound settings, then restart.")
-        s = sd.InputStream(device=dev, channels=1, samplerate=rate, blocksize=BLOCK,
+        s = sd.InputStream(device=dev, channels=1, samplerate=rate, blocksize=0,
                            dtype="float32", callback=cb)
         return s, "shared"
 
