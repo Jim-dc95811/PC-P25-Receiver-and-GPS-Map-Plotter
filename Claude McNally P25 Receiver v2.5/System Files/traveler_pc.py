@@ -37,7 +37,7 @@ Windows audio 'enhancements' OFF. Read-only throughout -- a radio is never
 transmitted to or altered.
 """
 import sys, os, time, queue, threading, socket
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -143,7 +143,7 @@ def _self_gga(lat, lon):
     lam, lom = (la - lad) * 60.0, (lo - lod) * 60.0
     ns = "N" if lat >= 0 else "S"
     ew = "E" if lon >= 0 else "W"
-    t = datetime.utcnow().strftime("%H%M%S.00")
+    t = datetime.now(timezone.utc).strftime("%H%M%S.00")
     body = "GPGGA,%s,%02d%08.5f,%s,%03d%08.5f,%s,1,10,0.9,30.0,M,-31.0,M,," % (
         t, lad, lam, ns, lod, lom, ew)
     return _nmea_mk(body)
