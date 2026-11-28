@@ -46,7 +46,7 @@ from combo_core import ComboDecoder      # GPS + CURRENT SPEAKER + voice, one st
 import imbe_decode                       # pure-Python IMBE voice -> PCM (no binary)
 from voice_ws import VoiceWS             # stream decoded PCM to the map's Listen button
 
-VERSION = "2.5"                   # McNally receiver -- GPS + voice, now reads serial GPS too
+VERSION = "2.6"                   # McNally receiver -- GPS + voice, now reads serial GPS too
 RATE = 48000                      # ask the card for 48 kHz mono (integer 10 sps)
 BLOCK = 2048                      # callback block size
 DEV_HINTS = ("blaster", "sb play", "usb audio", "usb-audio", "usb pnp", "line (")
@@ -381,15 +381,20 @@ def run_live(server, vws=None):
     # Windows audio engine (level/mixer/resampler) -- so the feed can't be re-leveled or
     # varnished by Windows. Falls back to shared mode cleanly if exclusive can't be had.
     def _open_capture():
-        try:
-            es = sd.WasapiSettings(exclusive=True)
-            s = sd.InputStream(device=dev, channels=1, samplerate=rate, blocksize=BLOCK,
-                               dtype="int16", callback=cb, extra_settings=es)
-            return s, "EXCLUSIVE"
-        except Exception as ee:
-            print("   .. exclusive mode unavailable (%s); using shared mode." % ee)
-            print("      For best results, tick 'Allow applications to take exclusive control'")
-            print("      on this input's Advanced tab in Windows Sound settings, then restart.")
+        # exclusive does no resampling, so the format must match the card's exclusive
+        # format -- try mono then stereo (a USB mic may only expose 2ch in exclusive).
+        last = None
+        for ch in (1, 2):
+            try:
+                es = sd.WasapiSettings(exclusive=True)
+                s = sd.InputStream(device=dev, channels=ch, samplerate=rate, blocksize=BLOCK,
+                                   dtype="int16", callback=cb, extra_settings=es)
+                return s, "EXCLUSIVE %dch" % ch
+            except Exception as ee:
+                last = ee
+        print("   .. exclusive mode unavailable (%s); using shared mode." % last)
+        print("      Tick 'Allow applications to take exclusive control' on this input's")
+        print("      Advanced tab in Windows Sound settings, then restart.")
         s = sd.InputStream(device=dev, channels=1, samplerate=rate, blocksize=BLOCK,
                            dtype="float32", callback=cb)
         return s, "shared"
@@ -458,14 +463,36 @@ def run_replay(wavpath, server, vws=None):
             print("\nstopping ...")
 
 
+def _wasapi_hostapi(sd):
+    """Index of the WASAPI host API, or None. WASAPI exclusive only engages on a
+    card's WASAPI entry -- the same card also enumerates under MME / DirectSound /
+    WDM-KS, and those copies (lower indices) silently fall back to shared, where the
+    Windows level slider scales the capture (turned to 100% it clips and kills decode)."""
+    try:
+        for i, a in enumerate(sd.query_hostapis()):
+            if "wasapi" in a["name"].lower():
+                return i
+    except Exception:
+        pass
+    return None
+
+
+def _ranked_inputs(sd, devs):
+    """All input devices, the WASAPI copies first so exclusive mode can engage."""
+    wa = _wasapi_hostapi(sd)
+    ins = [(i, d) for i, d in enumerate(devs) if d.get("max_input_channels", 0) > 0]
+    ins.sort(key=lambda t: 0 if t[1].get("hostapi") == wa else 1)
+    return ins
+
+
 def _auto_device(sd, forced=None):
     """Find the radio's input WITHOUT prompting -- for silent reconnects. Prefers the
-    forced index if it is still a valid input, else the first name-hint match, else None."""
+    forced index, else the WASAPI copy of the first name-hint match, else None."""
     try:
         devs = sd.query_devices()
     except Exception:
         return None
-    ins = [(i, d) for i, d in enumerate(devs) if d.get("max_input_channels", 0) > 0]
+    ins = _ranked_inputs(sd, devs)
     if forced is not None:
         for i, d in ins:
             if i == forced:
@@ -478,7 +505,7 @@ def _auto_device(sd, forced=None):
 
 def pick_device(sd, forced=None):
     devs = sd.query_devices()
-    ins = [(i, d) for i, d in enumerate(devs) if d["max_input_channels"] > 0]
+    ins = _ranked_inputs(sd, devs)      # WASAPI entries first -> exclusive can engage
     if forced is not None:
         return forced, devs[forced]["name"]
     for i, d in ins:
