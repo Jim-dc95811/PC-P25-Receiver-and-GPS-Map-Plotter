@@ -40,6 +40,13 @@ import sys, os, time, queue, threading, socket
 from datetime import datetime, timezone
 import numpy as np
 
+# When the launcher redirects our output to decoder_log.txt, Windows block-buffers
+# stdout -- so status lines (incl. "audio capture: EXCLUSIVE/shared mode") never reach
+# the log until the buffer fills. Make stdout/stderr line-buffered so the log is live.
+for _s in (sys.stdout, sys.stderr):
+    try: _s.reconfigure(line_buffering=True)
+    except Exception: pass
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from combo_core import ComboDecoder      # GPS + CURRENT SPEAKER + voice, one stream
