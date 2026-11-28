@@ -1,5 +1,0 @@
-Drop your offline maps for your area into THIS folder.
-
-Any .tpkx (ArcGIS Earth tile package) or .mbtiles file works.
-The Traveler PC serves whatever maps are here; use the MAPS button on the map to switch between them.
-You can delete this note once you have added a map.
