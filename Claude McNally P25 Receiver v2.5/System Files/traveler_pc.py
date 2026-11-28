@@ -495,6 +495,31 @@ def _ranked_inputs(sd, devs):
     return ins
 
 
+def _norm(s):
+    return "".join(c for c in (s or "").lower() if c.isalnum())
+
+
+def _resolve_wasapi(sd, idx, name):
+    """Return the card's WASAPI input entry for (idx, name) -- exclusive only engages
+    there. The chosen device is often the MME / DirectSound / WDM-KS copy (the launcher's
+    --device default is the MME one), and WasapiSettings on a non-WASAPI device fails with
+    -9984. MME also truncates names to 31 chars, so match on a normalized alnum prefix."""
+    try:
+        apis = sd.query_hostapis(); devs = sd.query_devices()
+    except Exception:
+        return idx, name
+    wa = next((i for i, a in enumerate(apis) if "wasapi" in a["name"].lower()), None)
+    if wa is None or idx is None or devs[idx].get("hostapi") == wa:
+        return idx, name                          # already WASAPI, or no WASAPI host api
+    tgt = _norm(name)
+    for i, d in enumerate(devs):
+        if d.get("hostapi") == wa and d.get("max_input_channels", 0) > 0:
+            n = _norm(d["name"])
+            if n and (n.startswith(tgt) or tgt.startswith(n)):
+                return i, d["name"]               # the WASAPI twin of the same card
+    return idx, name                              # no WASAPI twin found; keep the pick
+
+
 def _auto_device(sd, forced=None):
     """Find the radio's input WITHOUT prompting -- for silent reconnects. Prefers the
     forced index, else the WASAPI copy of the first name-hint match, else None."""
@@ -506,10 +531,10 @@ def _auto_device(sd, forced=None):
     if forced is not None:
         for i, d in ins:
             if i == forced:
-                return forced, d["name"]
+                return _resolve_wasapi(sd, forced, d["name"])
     for i, d in ins:
         if any(h in d["name"].lower() for h in DEV_HINTS):
-            return i, d["name"]
+            return _resolve_wasapi(sd, i, d["name"])
     return None
 
 
@@ -517,17 +542,17 @@ def pick_device(sd, forced=None):
     devs = sd.query_devices()
     ins = _ranked_inputs(sd, devs)      # WASAPI entries first -> exclusive can engage
     if forced is not None:
-        return forced, devs[forced]["name"]
+        return _resolve_wasapi(sd, forced, devs[forced]["name"])
     for i, d in ins:
         if any(h in d["name"].lower() for h in DEV_HINTS):
-            return i, d["name"]
+            return _resolve_wasapi(sd, i, d["name"])
     print("\nAvailable sound-card inputs:")
     for i, d in ins:
         print("  [%d] %s  (%d ch, %d Hz)" % (i, d["name"], d["max_input_channels"], int(d["default_samplerate"])))
     while True:
         s = input("Enter the number of the input the radio is wired to: ").strip()
         if s.isdigit() and int(s) in [i for i, _ in ins]:
-            return int(s), devs[int(s)]["name"]
+            return _resolve_wasapi(sd, int(s), devs[int(s)]["name"])
         print("  not a listed input number; try again.")
 
 
