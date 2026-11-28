@@ -72,6 +72,7 @@ Press **▶ Listen** at the top of the map — the browser plays decoded fleet v
 
 ## Troubleshooting (the usual ones)
 
+- **Run the self-check first.** In the receiver folder, `Troubleshooting\Check my setup.bat` inspects the whole chain — Python, the libraries (and offers to install any that are missing, if online), a live audio reading (and whether it's in clean *exclusive* mode), the GPS, and the network ports — and prints PASS / WARN / FAIL with a one-line fix for each. It usually names the problem before you have to guess.
 - **No units on the map** — units appear only when a radio transmits a GPS report. Confirm the sound card is on the *detector* audio (not speaker audio) and the radio is actually sending position.
 - **Nothing decodes but the radio is keying up** — set the receiving radio **WIDE**, open the squelch, check the level (clean, not clipping), 48 kHz, enhancements off.
 - **No map behind the units** — put a `.tpkx`/`.mbtiles` in `Maps` (Move 4), then refresh the browser.
