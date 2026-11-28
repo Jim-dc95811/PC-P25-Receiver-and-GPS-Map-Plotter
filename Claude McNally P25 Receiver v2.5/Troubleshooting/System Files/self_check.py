@@ -24,7 +24,7 @@ Runs on the operator's PC; the audio/GPS lines need Windows + the real gear.
 import sys, os, socket, subprocess
 from pathlib import Path
 
-VERSION = "1.0"
+VERSION = "1.1"
 
 # ---- where things are -------------------------------------------------------
 HERE      = Path(__file__).resolve().parent          # Troubleshooting/System Files
@@ -152,6 +152,34 @@ def check_engine():
         except ValueError: pass
 
 # ---- 6. Audio: one live listen ---------------------------------------------
+def _pick_input(sd, devs):
+    """Return (dev_index, name, hostapi_name). Prefer the WASAPI copy of the
+    hinted card -- WASAPI exclusive only engages on the device's WASAPI entry,
+    not its MME/DirectSound copy (which enumerate first and match the name too)."""
+    try:
+        apis = sd.query_hostapis()
+    except Exception:
+        apis = []
+    wasapi = next((i for i, a in enumerate(apis) if "wasapi" in a["name"].lower()), None)
+    def hinted(d): return d.get("max_input_channels", 0) > 0 and \
+        any(h in d["name"].lower() for h in DEV_HINTS)
+    # 1) WASAPI copy of a hinted card
+    if wasapi is not None:
+        for i, d in enumerate(devs):
+            if d.get("hostapi") == wasapi and hinted(d):
+                return i, d["name"], apis[wasapi]["name"]
+    # 2) any hinted input
+    for i, d in enumerate(devs):
+        if hinted(d):
+            api = apis[d["hostapi"]]["name"] if apis and d.get("hostapi") is not None else "?"
+            return i, d["name"], api
+    # 3) first input of any kind
+    for i, d in enumerate(devs):
+        if d.get("max_input_channels", 0) > 0:
+            api = apis[d["hostapi"]]["name"] if apis and d.get("hostapi") is not None else "?"
+            return i, d["name"], api
+    return None, None, None
+
 def check_audio():
     if not _have("sounddevice") or not _have("numpy"):
         say("WARN", "Audio input", "Skipped -- install the libraries first (above), then re-run.")
@@ -161,41 +189,67 @@ def check_audio():
         devs = sd.query_devices()
     except Exception as e:
         say("FAIL", "Audio input", "Can't list sound devices (%s)." % e); return
-    ins = [(i, d) for i, d in enumerate(devs) if d.get("max_input_channels", 0) > 0]
-    if not ins:
+    dev, name, api = _pick_input(sd, devs)
+    if dev is None:
         say("FAIL", "Audio input", "No recording device found. Plug in the USB sound card.")
         return
-    dev = next((i for i, d in ins if any(h in d["name"].lower() for h in DEV_HINTS)), ins[0][0])
-    name = devs[dev]["name"]
     rate = 48000
     try:
         rate = int(devs[dev].get("default_samplerate") or 48000)
     except Exception:
         pass
-    # take ~1 s, trying exclusive (the v2.5 path) then shared
-    def _grab(exclusive):
-        frames = int(rate * 1.0)
-        kw = {}
-        if exclusive:
-            kw["extra_settings"] = sd.WasapiSettings(exclusive=True)
-            rec = sd.rec(frames, samplerate=rate, channels=1, dtype="int16", device=dev, **kw)
-            sd.wait(); return rec.astype(np.float32) / 32768.0
+    frames = int(rate * 1.0)
+    excl_err = None
+
+    # Try EXCLUSIVE on the WASAPI device, probing the exact format it supports
+    # (exclusive does no resampling, so rate/channels/dtype must match exactly).
+    def _try_exclusive():
+        nonlocal excl_err
+        if "wasapi" not in (api or "").lower():
+            excl_err = "device isn't the WASAPI entry (%s); exclusive can't apply there" % api
+            return None, None
+        for ch in (1, 2):
+            try:
+                es = sd.WasapiSettings(exclusive=True)
+                rec = sd.rec(frames, samplerate=rate, channels=ch, dtype="int16",
+                             device=dev, extra_settings=es)
+                sd.wait()
+                return rec.astype(np.float32) / 32768.0, ch
+            except Exception as e:
+                excl_err = "%s" % e
+        return None, None
+
+    def _shared():
         rec = sd.rec(frames, samplerate=rate, channels=1, dtype="float32", device=dev)
         sd.wait(); return rec
-    mode = "EXCLUSIVE"
-    try:
-        x = _grab(True)
-    except Exception:
+
+    x, ch = _try_exclusive()
+    if x is not None:
+        mode = "EXCLUSIVE %dch @ %dHz" % (ch, rate)
+    else:
         mode = "shared"
         try:
-            x = _grab(False)
+            x = _shared()
         except Exception as e:
             say("FAIL", "Audio input", "Could not open '%s' (%s)." % (name, e)); return
-    x = np.nan_to_num(x).ravel()
+
+    x = np.nan_to_num(x)
+    if x.ndim > 1:                       # stereo exclusive -> fold to mono for the level
+        x = x.mean(axis=1)
+    x = x.ravel()
     peak = float(np.max(np.abs(x))) * 100.0
     rms  = float(np.sqrt(np.mean(x * x))) * 100.0
-    where = "%s  [%s mode]" % (name, mode)
+    where = "%s  [%s]  (host: %s)" % (name, mode, api)
     lvl = "peak %.0f%% / rms %.0f%%" % (peak, rms)
+    # note explaining the mode we landed in
+    if mode.startswith("EXCLUSIVE"):
+        mnote = "\nExclusive mode engaged -- Windows is out of the audio path. Ideal."
+    else:
+        mnote = ("\nRunning in SHARED mode. Why: %s.\n"
+                 "Shared still decodes fine (level doesn't change the decode). To force\n"
+                 "exclusive, the receiver must open the card's *WASAPI* entry; tell Claude\n"
+                 "what this line reports." % (excl_err or "exclusive open was refused"))
+
     if peak < 3:
         say("FAIL", "Audio input -- silent (%s)" % lvl,
             "%s\nNo audio reaching the card. Check the detector-audio cable and that\n"
@@ -203,15 +257,11 @@ def check_audio():
     elif peak > 97:
         say("WARN", "Audio input -- clipping (%s)" % lvl,
             "%s\nLevel's too hot. Turn the input down (and mic boost off). Decode still\n"
-            "works until it actually clips, but give it headroom." % where)
+            "works until it actually clips, but give it headroom.%s" % (where, mnote))
     else:
-        extra = ""
-        if mode == "shared":
-            extra = ("\nTip: tick 'Allow applications to take exclusive control' on the card's\n"
-                     "Advanced tab for the cleanest capture (shared still works).")
         say("PASS", "Audio input -- hearing audio (%s)" % lvl,
             "%s\nOpen-squelch hiss normally reads ~55-65%% peak, so this is the radio's\n"
-            "noise floor coming through. Good.%s" % (where, extra))
+            "noise floor coming through. Good.%s" % (where, mnote))
 
 # ---- 7. GPS (optional) ------------------------------------------------------
 def check_gps():
